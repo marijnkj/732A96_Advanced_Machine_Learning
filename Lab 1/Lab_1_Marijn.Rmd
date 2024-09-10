@@ -1,0 +1,22 @@
+---
+title: "Lab 1 Marijn"
+output: pdf_document
+date: "2024-09-10"
+---
+
+```{r setup}
+# Install required packages
+if (!requireNamespace("BiocManager", quietly=TRUE))
+  # install.packages("BiocManager")
+
+# BiocManager::install("RBGL")
+# BiocManager::install("Rgraphviz")
+BiocManager::install("gRain")
+```
+
+# Question 1
+```{r}
+# Load data
+data("asia")
+
+```
