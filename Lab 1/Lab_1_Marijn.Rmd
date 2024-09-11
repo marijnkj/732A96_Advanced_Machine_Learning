@@ -7,16 +7,109 @@ date: "2024-09-10"
 ```{r setup}
 # Install required packages
 if (!requireNamespace("BiocManager", quietly=TRUE))
-  # install.packages("BiocManager")
+install.packages("BiocManager")
 
-# BiocManager::install("RBGL")
-# BiocManager::install("Rgraphviz")
-BiocManager::install("gRain")
+BiocManager::install("RBGL")
+BiocManager::install("Rgraphviz")
+BiocManager::install("gRain", force=TRUE)
+```
+
+
+```{r}
+library(gRain)
+library(bnlearn)
+library(dplyr)
+library(caret)
 ```
 
 # Question 1
 ```{r}
 # Load data
 data("asia")
+
+# Create and compare graphs with HC alg
+graph1 <- hc(asia, score="bde", iss=100, restart=10)
+graph2 <- hc(asia, score="bde", iss=1, restart=10)
+
+# graphviz.plot(graph1)
+# graphviz.plot(graph2)
+graphviz.compare(graph1, graph2)
+```
+
+The HC algorithm may find different network structures because it is not guaranteed to find a global optimum. In the comparison above, the imaginary sample size (ISS) was changed which means that one network regularizes less with the Bayesian score. This network is much bigger, with many more edges than the network with small ISS. Increasing the number of random restarts may also result in different graphs as introducing more randomness may lead to separate runs of the algorithm to find a different local optimum. 
+
+```{r}
+# Sample 80% of data for training
+sample_ind <- sample(1:nrow(asia), 0.8 * nrow(asia))
+df_train <- asia[sample_ind,]
+df_test <- asia[-sample_ind,]
+
+# Learn structure and parameters
+# https://www.bnlearn.com/examples/fit/
+graph <- hc(df_train, score="bde", iss=3, restart=20)
+param <- bn.fit(graph, df_train, method="mle")
+
+# Visualize
+graphviz.plot(graph)
+print(fitted_graph)
+bn.fit.barchart(fitted_graph$S)
+
+# Convert to grain
+grain <- as.grain(param)
+
+pred <- rep(0, nrow(df_test))
+for (i in 1:nrow(df_test)) {
+  # Record evidence
+  nodes <- names(df_test)[!names(df_test) %in% "S"]
+  states <- df_test[i, nodes]
+  
+  # # https://www.rdocumentation.org/packages/gRain/versions/1.3-2/topics/grain-evidence
+  evidence <- setEvidence(grain, nodes, states)
+  
+  # https://www.rdocumentation.org/packages/gRain/versions/1.4.1/topics/querygrain
+  # pred[i] <- querygrain(grain, "S", evidence=evidence)
+  # pred[i] <- names(which.max(querygrain(grain, "S", evidence=evidence)$S))
+  cond_prob <- querygrain(grain, "S", evidence=evidence)$S
+  
+  if (runif(1) <= cond_prob["no"]) {
+    pred[i] <- "no"
+  }
+  else {
+    pred[i] <- "yes"
+  }
+}
+
+confusionMatrix(factor(pred), factor(df_test$S))
+
+dag <- model2network("[A][S][T|A][L|S][B|S][D|B:E][E|T:L][X|E]")
+```
+
+```{r}
+pred <- rep(0, nrow(df_test))
+for (i in 1:nrow(df_test)) {
+  # Record evidence
+  nodes <- mb(fitted_graph, "S")
+  states <- df_test[i, nodes]
+  
+  # # https://www.rdocumentation.org/packages/gRain/versions/1.3-2/topics/grain-evidence
+  evidence <- setEvidence(grain, nodes, states)
+  
+  # https://www.rdocumentation.org/packages/gRain/versions/1.4.1/topics/querygrain
+  # pred[i] <- querygrain(grain, "S", evidence=evidence)
+  # pred[i] <- names(which.max(querygrain(grain, "S", evidence=evidence)$S))
+  cond_prob <- querygrain(grain, "S", evidence=evidence)$S
+  
+  if (runif(1) <= cond_prob["no"]) {
+    pred[i] <- "no"
+  }
+  else {
+    pred[i] <- "yes"
+  }
+}
+
+confusionMatrix(factor(pred), factor(df_test$S))
+```
+
+```{r}
 
 ```
