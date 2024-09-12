@@ -1,9 +1,14 @@
 ---
-title: "Lab 1 Marijn"
-author: "Marijn Jaarsma"
+title: "Lab 1"
+author: "Simge Cinar, Simon Jorstedt, and Marijn Jaarsma"
 output: pdf_document
 date: "2024-09-10"
 ---
+
+# Statement of contribution
+- Question 1 is a combination of our code with some additional plots and analyses from Simge.
+- We had very similar solutions with similar results for questions 2-4.
+- Question 5 was discussed all together as we combined our results.
 
 ```{r Setup, include=FALSE}
 # Install required packages
@@ -15,7 +20,6 @@ date: "2024-09-10"
 # BiocManager::install("gRain", force=TRUE)
 ```
 
-
 ```{r Libraries, include=FALSE}
 library(gRain)
 library(bnlearn)
@@ -25,17 +29,45 @@ library(caret)
 
 # Question 1
 ```{r}
+set.seed(12345)
+
 # Load data
 data("asia")
 
 # Create and compare graphs with HC alg
 graph1 <- hc(asia, score="bde", iss=100, restart=10)
-graph2 <- hc(asia, score="bde", iss=1, restart=10)
+graph2 <- hc(asia, score="bde", iss=1, restart=1)
+
+graph3 <- hc(asia, restart=100)
+graph4 <- hc(asia, restart=1)
 
 graphviz.compare(graph1, graph2)
+graphviz.compare(graph3, graph4)
+
+# Compute and print DBeu scores
+score1 <- score(graph1, data=asia, type="bde")
+score2 <- score(graph2, data=asia, type="bde")
+score3 <- score(graph3, data=asia, type="bde")
+score4 <- score(graph4, data=asia, type="bde")
+
+cat("BDeu score for bn1:", score1, "\n")
+cat("BDeu score for bn2:", score2, "\n")
+cat("BDeu score for bn3:", score3, "\n")
+cat("BDeu score for bn4:", score4, "\n")
+
+# Print the best model composition
+cat("Best model:\n")
+modelstring(graph2)
+
+# Check equality for some networks
+cat("Equality check bn1 and bn4:\n")
+all.equal(graph1, graph4)
+cat("Equality check bn3 and bn4:\n")
+all.equal(graph3, graph4)
 ```
 
-The HC algorithm may find different network structures because it is not guaranteed to find a global optimum. In the comparison above, the imaginary sample size (ISS) was changed which means that one network regularizes less with the Bayesian score. This network is much bigger, with many more edges than the network with small ISS. Increasing the number of random restarts may also result in different graphs as introducing more randomness may lead to separate runs of the algorithm to find a different local optimum. 
+The HC algorithm may find different network structures because it is not guaranteed to find a global optimum. In the comparison above, the imaginary sample size (ISS) was changed which means that one network regularizes less with the Bayesian score. This network is much bigger, with many more edges than the network with small ISS. We can also see that this larger network has a worse BDeu score than the smaller network. 
+The last two networks only have a difference in the direction of the edge between S and B. These networks are Markov equivalent and have the same BDeu score, as the direction does not matter for the probability distribution. Increasing the number of random restarts may also result in different graphs as introducing more randomness may lead to separate runs of the algorithm to find a different local optimum. 
 
 # Question 2
 ```{r}
@@ -50,13 +82,17 @@ graph <- hc(df_train, score="bde", iss=3, restart=20)
 param <- bn.fit(graph, df_train, method="bayes")
 
 # Visualize and compare to true model
-# graphviz.plot(graph)
 print(param)
-# bn.fit.barchart(fitted_graph$S)
 
 dag <- model2network("[A][S][T|A][L|S][B|S][D|B:E][E|T:L][X|E]")
 graphviz.compare(graph, bn.fit(dag, asia))
 ```
+
+Our graph is very close to the true graph, with only an extra edge between A and E.
+
+NOTE THAT: Conditional probability tables in grain objects must be completely specified; on the other hand, bn.fit allows NaN values for unobserved parents' configurations. Such bn.fit objects will be converted to $m$ grain objects by replacing the missing conditional probability distributions with uniform distributions. 
+
+Another solution to this problem is to fit another bn.fit with method="bayes" and a low iss value, using the same data and network structure. ?as.grain
 
 ```{r}
 # Convert to grain
