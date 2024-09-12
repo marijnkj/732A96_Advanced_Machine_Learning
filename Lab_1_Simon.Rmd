@@ -1,0 +1,132 @@
+---
+title: "Adv. ML. Lab 1"
+author: "Simon Jorstedt"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+
+```{r}
+# Packages and other setup
+library(gRain)
+library(BiocManager)
+library(bnlearn)
+library(caret)
+
+data("asia")
+head(asia, 3)
+```
+
+# Problem 1
+We are to show that multiple runs of HC can return different Bayesian Network structures. Two Bayesian Network structures are identical iff they have the same adjacencies, \textit{and} they have the same unshielded colliders. We can check this by using the function `all.equal`. Below we see two very different Bayesian Network structures being generated. Here the two structures differ both in the adjacencies, and in the unshielded colliders.
+
+```{r, fig.width="50%"}
+# Run Hill Climbing Algorithm to find Bayesian Network strcucture
+
+set.seed(83746)
+hc_result_1 <- hc(x=asia, restart = 1)
+hc_result_2 <- hc(x=asia, restart = 5, score="bde", iss=5)
+
+# Check if BN structures are equal
+all.equal(hc_result_1, hc_result_2)
+
+# Plot BN 1 and 2
+plot(hc_result_1)
+plot(hc_result_2)
+```
+
+# Problem 2 - Learn a BN
+Now, we shall learn a Bayesian Network (structure *and* parameters) using 80% of the data. Then we will use the learned network to classify the remaining 20% of the data. Below we see that the structure does not contain any undirected edges, so we can go directly to fitting the parameters using maximum likelihood estimation.
+
+
+```{r}
+# Split data
+train_indices <- sample(1:nrow(asia), 0.8*nrow(asia), replace = FALSE)
+train_data <- asia[train_indices,]
+test_data <- asia[-train_indices,]
+
+# Fit the Bayesian network structure
+bn_structure <- hc(x=train_data, restart = 1)
+plot(bn_structure)
+
+# Fit the parameters for a Bayesian Network structure.
+parameters_hc1 = bn.fit(bn_structure, train_data, method = "mle")
+parameters_hc1
+```
+
+
+
+
+
+```{r}
+# Classify values of variable S for observations in test data
+
+# Setup: create grain object, and create test data set without S column
+grain <- compile(as.grain(parameters_hc1))
+test_data_no_S <- test_data[,c(1,3:8)]
+S_values <- c()
+
+for (i in 1:nrow(test_data)){
+  evidence <- setEvidence(grain,
+                          nodes = colnames(test_data_no_S),
+                          states = as.vector(t(test_data_no_S[i,])))
+  estimate <- querygrain(evidence, nodes = c("S"))
+  
+  if (estimate$S[[1]] >= 0.5){predicted_S <- "no"}
+  else{predicted_S <- "yes"}
+  S_values <- c(S_values, predicted_S)
+}
+
+confusionMatrix(data=as.factor(S_values), reference=test_data$S)
+```
+
+
+
+```{r}
+# Plot the "true" Bayesian Network
+plot(model2network("[A][S][T|A][L|S][B|S][D|B:E][E|T:L][X|E]"))
+```
+
+# Problem 3
+
+
+
+# Old code
+
+
+
+```{r}
+#querygrain(as.grain(parameters_hc1), nodes = c("S"))
+
+# TEST
+grain <- compile(as.grain(parameters_hc1))
+nodes <- colnames(test_data[,c(1,3:8)])
+evidence2 <- setEvidence(as.grain(parameters_hc1),
+                         nodes = nodes,
+                         states = as.vector(t(test_data[1,c(1,3:8)])))
+querygrain(evidence2, nodes = c("S"))
+
+evidence3 <- setEvidence(as.grain(parameters_hc1),
+                         nodes = nodes,
+                         states = as.vector(t(test_data[761,c(1,3:8)])))
+a<-querygrain(evidence3, nodes = c("S"))
+
+# TEST
+a$S[[1]]
+#as.vector(t(test_data[1,c(1,3:8)]))
+```
+
+```{r}
+# My initial attempt to show that hc can produce different structures on different runs
+hc_results <- list()
+for (i in 1:10){
+  bay_network <- hc(x=asia, restart = 5, score="bde", iss=5)
+  print(sort(bay_network$arcs[,1]))
+  plot(bay_network)
+  print(vstructs(bay_network))
+  hc_results[[i]] <- bay_network
+}
+```
+
+
