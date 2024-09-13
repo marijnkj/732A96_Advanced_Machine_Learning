@@ -1,0 +1,205 @@
+---
+title: "Lab 1"
+author: "Simge Cinar, Simon Jorstedt, and Marijn Jaarsma"
+output: pdf_document
+date: "2024-09-10"
+---
+
+# Statement of contribution
+- Question 1 is a combination of our code with some additional plots and analyses from Simge.
+- We had very similar solutions with similar results for questions 2-4.
+- Question 5 was discussed all together as we combined our results.
+
+```{r Setup, include=FALSE}
+# Install required packages
+# if (!requireNamespace("BiocManager", quietly=TRUE))
+# install.packages("BiocManager")
+# 
+# BiocManager::install("RBGL")
+# BiocManager::install("Rgraphviz")
+# BiocManager::install("gRain", force=TRUE)
+```
+
+```{r Libraries, include=FALSE}
+library(gRain)
+library(bnlearn)
+library(dplyr)
+library(caret)
+```
+
+# Question 1
+```{r}
+set.seed(12345)
+
+# Load data
+data("asia")
+
+# Create and compare graphs with HC alg
+graph1 <- hc(asia, score="bde", iss=100, restart=10)
+graph2 <- hc(asia, score="bde", iss=1, restart=1)
+
+graph3 <- hc(asia, restart=100)
+graph4 <- hc(asia, restart=1)
+
+graphviz.compare(graph1, graph2)
+graphviz.compare(graph3, graph4)
+
+# Compute and print DBeu scores
+score1 <- score(graph1, data=asia, type="bde")
+score2 <- score(graph2, data=asia, type="bde")
+score3 <- score(graph3, data=asia, type="bde")
+score4 <- score(graph4, data=asia, type="bde")
+
+cat("BDeu score for bn1:", score1, "\n")
+cat("BDeu score for bn2:", score2, "\n")
+cat("BDeu score for bn3:", score3, "\n")
+cat("BDeu score for bn4:", score4, "\n")
+
+# Print the best model composition
+cat("Best model:\n")
+modelstring(graph2)
+
+# Check equality for some networks
+cat("Equality check bn1 and bn4:\n")
+all.equal(graph1, graph4)
+cat("Equality check bn3 and bn4:\n")
+all.equal(graph3, graph4)
+```
+
+The HC algorithm may find different network structures because it is not guaranteed to find a global optimum. In the comparison above, the imaginary sample size (ISS) was changed which means that one network regularizes less with the Bayesian score. This network is much bigger, with many more edges than the network with small ISS. We can also see that this larger network has a worse BDeu score than the smaller network. 
+The last two networks only have a difference in the direction of the edge between S and B. These networks are Markov equivalent and have the same BDeu score, as the direction does not matter for the probability distribution. Increasing the number of random restarts may also result in different graphs as introducing more randomness may lead to separate runs of the algorithm to find a different local optimum. 
+
+# Question 2
+```{r}
+# Sample 80% of data for training
+sample_ind <- sample(1:nrow(asia), 0.8 * nrow(asia))
+df_train <- asia[sample_ind,]
+df_test <- asia[-sample_ind,]
+
+# Learn structure and parameters
+# https://www.bnlearn.com/examples/fit/
+graph <- hc(df_train, score="bde", iss=3, restart=20)
+param <- bn.fit(graph, df_train, method="bayes")
+
+# Visualize and compare to true model
+print(param)
+
+dag <- model2network("[A][S][T|A][L|S][B|S][D|B:E][E|T:L][X|E]")
+graphviz.compare(graph, bn.fit(dag, asia))
+```
+
+Our graph is very close to the true graph, with only an extra edge between A and E.
+
+NOTE THAT: Conditional probability tables in grain objects must be completely specified; on the other hand, bn.fit allows NaN values for unobserved parents' configurations. Such bn.fit objects will be converted to $m$ grain objects by replacing the missing conditional probability distributions with uniform distributions. 
+
+Another solution to this problem is to fit another bn.fit with method="bayes" and a low iss value, using the same data and network structure. ?as.grain
+
+```{r}
+# Convert to grain
+grain <- compile(as.grain(param))
+
+pred <- rep(0, nrow(df_test))
+nodes <- names(df_test)[!names(df_test) %in% "S"]
+for (i in 1:nrow(df_test)) {
+  # Record evidence
+  states <- as.vector(t(df_test[i, nodes]))
+  
+  # # https://www.rdocumentation.org/packages/gRain/versions/1.3-2/topics/grain-evidence
+  evidence <- setEvidence(grain, nodes, states)
+  
+  # https://www.rdocumentation.org/packages/gRain/versions/1.4.1/topics/querygrain
+  pred[i] <- names(which.max(querygrain(evidence, "S", evidence=evidence)$S))
+
+}
+
+# Compute confusion matrix
+confusionMatrix(factor(pred), factor(df_test$S))
+```
+
+```{r}
+param_best_dag <- bn.fit(dag, df_train, method="bayes")
+
+# Convert to grain
+grain_best_dag <- compile(as.grain(param_best_dag))
+
+pred_best_dag <- rep(0, nrow(df_test))
+nodes <- names(df_test)[!names(df_test) %in% "S"]
+for (i in 1:nrow(df_test)) {
+  # Record evidence
+  states <- as.vector(t(df_test[i, nodes]))
+  
+  # # https://www.rdocumentation.org/packages/gRain/versions/1.3-2/topics/grain-evidence
+  evidence <- setEvidence(grain_best_dag, nodes, states)
+  
+  # https://www.rdocumentation.org/packages/gRain/versions/1.4.1/topics/querygrain
+  pred_best_dag[i] <- names(which.max(querygrain(evidence, "S", evidence=evidence)$S))
+
+}
+
+# Compute confusion matrix
+confusionMatrix(factor(pred_best_dag), factor(df_test$S))
+```
+
+Our graphs and the true Asia BN you provided yielded the same confusion matrix. Note that those two graphs are equivalent.
+
+
+# Question 3
+```{r}
+pred <- rep(0, nrow(df_test))
+for (i in 1:nrow(df_test)) {
+  # Record evidence
+  nodes <- mb(param, "S")
+  states <- as.vector(t(df_test[i, nodes]))
+  
+  # # https://www.rdocumentation.org/packages/gRain/versions/1.3-2/topics/grain-evidence
+  evidence <- setEvidence(grain, nodes, states)
+  
+  # https://www.rdocumentation.org/packages/gRain/versions/1.4.1/topics/querygrain
+  # pred[i] <- querygrain(grain, "S", evidence=evidence)
+  pred[i] <- names(which.max(querygrain(evidence, "S")$S))
+}
+
+confusionMatrix(factor(pred), factor(df_test$S))
+```
+
+# Question 4
+```{r}
+# Create naive Bayesian graph
+# https://www.bnlearn.com/examples/dag/
+graph <- empty.graph(c("A", "S", "T", "L", "B", "D", "E", "X"))
+arc_set <- matrix(c("S", "A", "S", "T", "S", "L", "S", "B", "S", "D", "S", "E", "S", "X"), 
+                  ncol=2, byrow=TRUE, dimnames=list(NULL, c("from", "to")))
+arcs(graph) <- arc_set
+
+graphviz.plot(graph)
+```
+
+```{r}
+# Train and convert to grain
+param <- bn.fit(graph, df_train, method="bayes")
+grain <- compile(as.grain(param))
+
+pred <- rep(0, nrow(df_test))
+nodes <- names(df_test)[!names(df_test) %in% "S"]
+for (i in 1:nrow(df_test)) {
+  # Record evidence
+  states <- as.vector(t(df_test[i, nodes]))
+  
+  # # https://www.rdocumentation.org/packages/gRain/versions/1.3-2/topics/grain-evidence
+  evidence <- setEvidence(grain, nodes, states)
+  
+  # https://www.rdocumentation.org/packages/gRain/versions/1.4.1/topics/querygrain
+  pred[i] <- names(which.max(querygrain(evidence, "S", evidence=evidence)$S))
+
+}
+
+# Compute confusion matrix
+confusionMatrix(factor(pred), factor(df_test$S))
+```
+
+# Question 5
+In this case, there was no difference in accuracy between using the full model as evidence and using the Markov blanket. We hypothesize that the Markov blanket would give slightly worse results in a more complex network, because then we may be ignoring dependencies that do have an impact on the investigated variable. The naive classifier performs a little bit worse than the other two, likely because the model is modeling dependencies incorrectly. This may lead to other variables impacting S within this graph, while that is not true in reality. 
+
+
+
+
