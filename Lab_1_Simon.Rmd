@@ -6,7 +6,6 @@ output: pdf_document
 ---
 
 
-
 ```{r}
 # Packages and other setup
 library(gRain)
