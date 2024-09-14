@@ -1,0 +1,8 @@
+---
+title: "Adv. ML. Lab 2"
+author: "Simon Jorstedt"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+The game.
