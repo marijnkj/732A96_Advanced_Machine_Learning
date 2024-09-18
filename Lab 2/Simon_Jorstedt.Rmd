@@ -6,3 +6,72 @@ output: pdf_document
 ---
 
 The game.
+
+
+```{r}
+
+```
+
+
+
+
+# Problem 1
+
+
+We will assume that the robot starts in a random state.
+
+
+```{r}
+# This chunk is for like, loading packages, and like doing other kinds of setup
+# like creating the starting probabilities and the transition probability matrix.
+
+library(HMM)
+
+startProbs <- rep(0.1, 10)
+
+transProbs <- matrix(c(c(0.5, 0.5,  0,   0,   0,   0,   0,   0,   0,     0),
+                       c(0,   0.5,  0.5, 0,   0,   0,   0,   0,   0,     0),
+                       c(0,   0,    0.5, 0.5, 0,   0,   0,   0,   0,     0),
+                       c(0,   0,    0,   0.5, 0.5, 0,   0,   0,   0,     0),
+                       c(0,   0,    0,   0,   0.5, 0.5, 0,   0,   0,     0),
+                       c(0,   0,    0,   0,   0,   0.5, 0.5, 0,   0,     0),
+                       c(0,   0,    0,   0,   0,   0,   0.5, 0.5, 0,     0),
+                       c(0,   0,    0,   0,   0,   0,   0,   0.5, 0.5,   0),
+                       c(0,   0,    0,   0,   0,   0,   0,   0,   0.5,   0.5),
+                       c(0.5, 0,    0,   0,   0,   0,   0,   0,   0,     0.5)
+                       ), nrow = 10, ncol = 10, byrow = TRUE)
+
+emissionProbs <- matrix(c(c(0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2),
+                          c(0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2),
+                          c(0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0),
+                          c(0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0),
+                          c(0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0),
+                          c(0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0),
+                          c(0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0),
+                          c(0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2),
+                          c(0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.2),
+                          c(0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2)
+                          ), nrow = 10, ncol = 10, byrow = TRUE)
+
+# Initialise a HMM model
+HMM_model <- initHMM(States = 1:10,
+                     Symbols = 1:10,
+                     startProbs = startProbs,
+                     transProbs = transProbs,
+                     emissionProbs = emissionProbs)
+```
+
+# Problem 2
+Now we shall simulate the HMM that we initiated previously. This comes down to just running the `simHMM` function.
+
+```{r}
+set.seed(322347)
+HMM_run1 <- simHMM(HMM_model, length = 100)
+```
+
+# Problem 3
+Now we shall use our emission observations above to compute the smoothed and filtered probability distributions respectively using the Forward-Backward algorithm. We will also compute the most probable path using the Viterbi algorithm.
+
+
+
+
