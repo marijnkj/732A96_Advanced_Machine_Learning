@@ -5,23 +5,10 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-The game.
-
-
-```{r}
-
-```
-
-
-
-
 # Problem 1
+In this lab we will construct and simulate a Hidden Markov Model where we imagine an agent walking along a cycle of states such that the agent in each time step will stay or move on to the next step with equal probabilities. There are ten states, so the agent can move from state 1 to 2, 2 to 3, etc, and from state 10 to 1. The hidden states in the model will represent the true position of the agent, while the emissions will be randomly selected from the set $\{i-2, i-1, i, i+1, i+2\}$ when the agent is in state $i$. For the simulations, we let the agent start in a uniformly randomly selected state. Below we create the programmatic setup such as the transition probability matrix, the emission probability matrix and the HMM. The states are the integers $1, \cdots, 10$, and in this case so are the emission symbols.
 
-
-We will assume that the robot starts in a random state.
-
-
-```{r}
+```{r Setup}
 # This chunk is for like, loading packages, and like doing other kinds of setup
 # like creating the starting probabilities and the transition probability matrix.
 
@@ -54,24 +41,77 @@ emissionProbs <- matrix(c(c(0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2),
                           ), nrow = 10, ncol = 10, byrow = TRUE)
 
 # Initialise a HMM model
-HMM_model <- initHMM(States = 1:10,
-                     Symbols = 1:10,
-                     startProbs = startProbs,
-                     transProbs = transProbs,
-                     emissionProbs = emissionProbs)
+HMM_1 <- initHMM(States = 1:10,
+                 Symbols = 1:10,
+                 startProbs = startProbs,
+                 transProbs = transProbs,
+                 emissionProbs = emissionProbs)
 ```
 
 # Problem 2
 Now we shall simulate the HMM that we initiated previously. This comes down to just running the `simHMM` function.
 
-```{r}
+```{r Simulations}
 set.seed(322347)
-HMM_run1 <- simHMM(HMM_model, length = 100)
+HMM_sim1 <- simHMM(HMM_1, length = 100)
+HMM_sim2 <- simHMM(HMM_1, length = 100)
+HMM_sim3 <- simHMM(HMM_1, length = 100)
+HMM_sim4 <- simHMM(HMM_1, length = 100)
 ```
 
 # Problem 3
-Now we shall use our emission observations above to compute the smoothed and filtered probability distributions respectively using the Forward-Backward algorithm. We will also compute the most probable path using the Viterbi algorithm.
+Now we shall use our emission observations above to compute the smoothed and filtered probability distributions using `HMM::backward` and `HMM:forward` respectively. We will also compute the most probable path using the Viterbi algorithm. In Figure 1 below we also visualize the true path (black), the emitted/observed path (blue), and the most probable path (red).
 
+```{r}
+# This is the alphas, converted into the p(z^t|x^(0:t))
+alphas <- exp(forward(HMM_1, observation = HMM_sim1$observation))
+filtered_probabilities <- prop.table(alphas, margin=2)
+
+# probabilities p(z^t|z^(0:T))
+smoothed_probabilities <- exp(backward(HMM_1, observation = HMM_sim1$observation))
+#smoothed_probabilities <- prop.table(alphas*betas, margin=2)
+```
+
+```{r}
+# Find the most likely state for each time step, from the filtered and smoothed
+# probabilities.
+filtered_states <- apply(filtered_probabilities, FUN=which.max, MARGIN=2)
+smoothed_states <- apply(smoothed_probabilities, FUN=which.max, MARGIN=2)
+plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State")
+points(filtered_states, type="l", col="red")
+points(smoothed_states, type="l", col="blue")
+```
+
+
+```{r}
+# Visualization of the most probable path,
+# calculated using the Viterbi algorithm
+
+viterbi_run1 <- HMM::viterbi(HMM_1, HMM_sim1$observation)
+plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State")
+points(viterbi_run1, type="l", col="red")
+points(HMM_sim1$observation, type="l", col="blue")
+```
+
+# Problem 4
+
+
+
+```{r}
+plot(HMM_run1$states, type="l")
+points(HMM_run1$observation, type="l", col="red")
+```
+
+
+```{r}
+# TESTING
+HMM_test_sim <- HMM::simHMM(HMM_1, length = 5)
+HMM_test_for <- HMM::forward(HMM_1, observation = HMM_test_sim$observation)
+HMM_test_bac <- HMM::backward(HMM_1, observation = HMM_test_sim$observation)
+#exp(HMM_test_for)
+exp(HMM_test_bac)
+
+```
 
 
 
