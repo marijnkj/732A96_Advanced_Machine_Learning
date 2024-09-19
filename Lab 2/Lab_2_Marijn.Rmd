@@ -7,6 +7,7 @@ output: pdf_document
 
 ```{r}
 library(HMM)
+library(entropy)
 ```
 
 # Question 1
@@ -88,7 +89,9 @@ compute_paths <- function(hmm, obs) {
 paths <- compute_paths(hmm, obs)
 
 # Plot paths of each distribution
-plot(sim$states, type="l", lwd=2, main="True=black, Filtered=blue, Smoothed=red, Viterbi=green")
+plot(sim$states, type="l", lwd=2, 
+     main="True=black, Filtered=blue, Smoothed=red, Viterbi=green", 
+     xlab="Time", ylab="State")
 points(paths$filter_path, type="l", col="blue")
 points(paths$smooth_path, type="l", col="red")
 points(paths$most_prob_path, type="l", col="green")
@@ -122,11 +125,29 @@ for (i in 1:5) {
 }
 ```
 
+The smoothed distributions should be more accurate because it uses more information than the filtered distribution. The filtered distribution only uses the observed data up to time t, whereas the smoothed distribution used the past as well as the future data. Additionally, the smoothed distribution is likely to be more accurate than the most probable path because the most probable path works under the constraint that each predicted state should be valid given the previous state within the model. However, if the previous state was inaccurately predicted, this error may cascade down to future predictions.
+
 # Question 6
 ```{r}
+# Compute alpha(z_t) and beta(z_t)
+alpha_t <- exp(forward(hmm, obs))
+beta_t <- exp(backward(hmm, obs))
 
+# Normalize distributions
+filter_distr <- prop.table(alpha_t, margin=2)
+
+# Compute entropy over time
+entr <- c()
+for (i in 1:ncol(filter_distr)) {
+  entr[i] <- entropy.empirical(filter_distr[, i])  
+}
+
+# Plot entropy
+plot(entr, type="l", main="Entropy of Filtered Distribution over Time",
+     xlab="Time", ylab="Entropy")
 ```
 
+When we plot the entropy of the filtered distributions at different times, it becomes clear that the uncertainty does not necessarily decrease later in time.
 
 # Question 7
 ```{r}
