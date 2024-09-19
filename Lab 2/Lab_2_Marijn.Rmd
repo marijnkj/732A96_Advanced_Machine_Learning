@@ -1,0 +1,139 @@
+---
+title: "Lab 2"
+author: "Marijn Jaarsma"
+date: "2024-09-19"
+output: pdf_document
+---
+
+```{r}
+library(HMM)
+```
+
+# Question 1
+```{r}
+n_states <- n_emissions <- 10
+
+# Fill up the transition probability matrix
+# At any given time point, the robot is in one of the sectors and decides with 
+# equal probability to stay in that sector or move to the next sector.
+transProbs <- matrix(NA, nrow=n_states, ncol=n_states)
+
+for (i in 1:nrow(transProbs)) {
+  if (i != nrow(transProbs)) {
+    transProbs[i, i:(i + 1)] <- 0.5
+  }
+  else {
+    transProbs[i, c(1, i)] <- 0.5
+  }
+}
+
+# Fill up the emission probability matrix
+# If the robot is in sector i, then the device will report that the robot is in
+# the sectors [i - 2, i + 2] with equal probability.
+emissionProbs <- matrix(NA, nrow=n_states, ncol=n_emissions)
+
+for (i in 1:nrow(emissionProbs)) {
+  if (i < 3) {
+    emissionProbs[i, (ncol(emissionProbs) - 2 + i):ncol(emissionProbs)] <- 0.2 # End part of the loop
+    emissionProbs[i, 1:(i + 2)] <- 0.2 # 1 : i + 2
+  }
+  else if (i > ncol(emissionProbs) - 2) {
+    emissionProbs[i, (i - 2):ncol(emissionProbs)] <- 0.2 # i - 2 : 10
+    emissionProbs[i, 1:(2 - (ncol(emissionProbs) - i))] <- 0.2 # Beginning part of the loop
+  }
+  else {
+    emissionProbs[i, (i - 2):(i + 2)] <- 0.2 # i - 2 : i + 2
+  }
+}
+
+# Initialize HMM
+hmm <- initHMM(States=c(1:n_states), Symbols=c(1:n_emissions), transProbs=transProbs, emissionProbs=emissionProbs)
+```
+
+# Question 2
+```{r}
+# Simulate 100 time steps
+n_steps <- 100
+sim <- simHMM(hmm, n_steps)
+for (i in 1:5) {
+  cat("Time ", i, "\nState: ", sim$states[i], "\nObservation: ", sim$observation[i], "\n\n")
+}
+cat("...")
+```
+
+# Question 3
+```{r}
+# Save observations of simulation
+obs <- sim$observation
+
+compute_paths <- function(hmm, obs) {
+  paths <- list()
+  
+  # Compute alpha(z_t) and beta(z_t)
+  alpha_t <- exp(forward(hmm, obs))
+  beta_t <- exp(backward(hmm, obs))
+  
+  # Normalize distributions
+  filter_distr <- prop.table(alpha_t, margin=2)
+  smooth_distr <- prop.table(alpha_t * beta_t, margin=2)
+  
+  # Get most likely positions
+  paths$filter_path <- apply(filter_distr, 2, which.max)
+  paths$smooth_path <- apply(smooth_distr, 2, which.max)
+  paths$most_prob_path <- viterbi(hmm, obs)
+
+  return(paths)
+}
+
+paths <- compute_paths(hmm, obs)
+
+# Plot paths of each distribution
+plot(sim$states, type="l", lwd=2, main="True=black, Filtered=blue, Smoothed=red, Viterbi=green")
+points(paths$filter_path, type="l", col="blue")
+points(paths$smooth_path, type="l", col="red")
+points(paths$most_prob_path, type="l", col="green")
+```
+
+# Question 4
+```{r}
+# Compute the accuracies of each path versus the states
+compute_accuracies <- function(paths, states) {
+  filter_acc <- sum(paths$filter_path == states) / length(states)
+  smooth_acc <- sum(paths$smooth_path == states) / length(states)
+  viterbi_acc <- sum(paths$most_prob_path == states) / length(states)
+  
+  cat("Filtered accuracy: ", filter_acc, "\nSmoothed accuracy: ", smooth_acc, 
+      "\nViterbi accuracy: ", viterbi_acc)  
+}
+
+compute_accuracies(paths, sim$states)
+```
+
+# Question 5
+```{r}
+# Repeat process for different simulations
+for (i in 1:5) {
+  sim <- simHMM(hmm, n_steps)  
+  paths <- compute_paths(hmm, sim$observation)
+  
+  cat("Iteration ", i, "\n")
+  compute_accuracies(paths, sim$states)
+  cat("\n\n")
+}
+```
+
+# Question 6
+```{r}
+
+```
+
+
+# Question 7
+```{r}
+
+```
+
+
+
+
+
