@@ -56,6 +56,7 @@ hmm <- initHMM(States=c(1:n_states), Symbols=c(1:n_emissions), transProbs=transP
 # Simulate 100 time steps
 n_steps <- 100
 sim <- simHMM(hmm, n_steps)
+
 for (i in 1:5) {
   cat("Time ", i, "\nState: ", sim$states[i], "\nObservation: ", sim$observation[i], "\n\n")
 }
@@ -151,7 +152,28 @@ When we plot the entropy of the filtered distributions at different times, it be
 
 # Question 7
 ```{r}
+# Save last time step of filter distribution
+cond_p_z_T <- filter_distr[, ncol(filter_distr)]
+cond_p_z_Tp1 <- c()
 
+for (i in 1:n_states) {
+  p_stay <- cond_p_z_T[i] * 0.5 # Probability of staying in sector
+  
+  # Probability of moving to sector
+  if (i == 1) {
+    p_move <- cond_p_z_T[length(cond_p_z_T)] * 0.5
+  }
+  else {
+    p_move <- cond_p_z_T[i - 1] * 0.5  
+  }
+  
+  # Combine to conditional
+  cond_p_z_Tp1[i] <- p_stay + p_move
+}
+
+cat("p(z_101 | x_1:100) = \n")
+names(cond_p_z_Tp1) <- 1:n_states
+cond_p_z_Tp1
 ```
 
 
