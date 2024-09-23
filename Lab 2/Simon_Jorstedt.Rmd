@@ -60,58 +60,106 @@ HMM_sim4 <- simHMM(HMM_1, length = 100)
 ```
 
 # Problem 3
-Now we shall use our emission observations above to compute the smoothed and filtered probability distributions using `HMM::backward` and `HMM:forward` respectively. We will also compute the most probable path using the Viterbi algorithm. In Figure 1 below we also visualize the true path (black), the emitted/observed path (blue), and the most probable path (red).
+Now we shall use our emission observations above to compute the smoothed and filtered probability distributions using `HMM::backward` and `HMM:forward` respectively. We will also compute the most probable path using the Viterbi algorithm. In Figure 1 below we also visualize the true path (black), the emitted/observed path (blue), and the most probable path (red). We create two custom functions to calculate the most probable "filtered" and "smoothed" states.
 
 ```{r}
-# This is the alphas, converted into the p(z^t|x^(0:t))
-alphas <- exp(forward(HMM_1, observation = HMM_sim1$observation))
-filtered_probabilities <- prop.table(alphas, margin=2)
-
-# probabilities p(z^t|z^(0:T))
-smoothed_probabilities <- exp(backward(HMM_1, observation = HMM_sim1$observation))
-#smoothed_probabilities <- prop.table(alphas*betas, margin=2)
+likeliest_states <- function(HMM, Simulation){
+  alphas <- exp(forward(HMM, observation = Simulation$observation))
+  betas <- exp(backward(HMM, observation = Simulation$observation))
+  
+  filtered_probabilities <- prop.table(alphas, margin=2)
+  smoothed_probabilities <- prop.table(alphas*betas, margin=2)
+  
+  filtered_states <- apply(filtered_probabilities, FUN=which.max, MARGIN=2)
+  smoothed_states <- apply(smoothed_probabilities, FUN=which.max, MARGIN=2)
+  
+  return(list(filtered_states, smoothed_states))
+}
 ```
 
 ```{r}
 # Find the most likely state for each time step, from the filtered and smoothed
 # probabilities.
-filtered_states <- apply(filtered_probabilities, FUN=which.max, MARGIN=2)
-smoothed_states <- apply(smoothed_probabilities, FUN=which.max, MARGIN=2)
-plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State")
-points(filtered_states, type="l", col="red")
-points(smoothed_states, type="l", col="blue")
-```
+likely_states_1 <- likeliest_states(HMM_1, HMM_sim1)
 
+filtered_states_1 <- likely_states_1[[2]]
+smoothed_states_1 <- likely_states_1[[1]]
+
+plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State",
+     main="Fig 2: Most probable states from filtered (red) and smoothed (blue)\n probabilities")
+points(filtered_states_1, type="l", col="red")
+points(smoothed_states_1, type="l", col="blue")
+```
 
 ```{r}
 # Visualization of the most probable path,
 # calculated using the Viterbi algorithm
 
 viterbi_run1 <- HMM::viterbi(HMM_1, HMM_sim1$observation)
-plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State")
+plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State",
+     main="Fig 2: Most probable path")
 points(viterbi_run1, type="l", col="red")
-points(HMM_sim1$observation, type="l", col="blue")
 ```
 
-# Problem 4
+# Problem 4 and 5
+Now compute accuracy of filtered and smoothed probability distributions and of the most probable path.
 
+```{r}
+print("Simulation 1 accuracies")
+mean(HMM_sim1$states == likely_states_1[[1]]) # Filtered
+mean(HMM_sim1$states == likely_states_1[[2]]) # Smoothed
+mean(HMM_sim1$states == viterbi_run1) # Most probable path
+```
 
 
 ```{r}
-plot(HMM_run1$states, type="l")
-points(HMM_run1$observation, type="l", col="red")
+print("Simulation 2 accuracies")
+likely_states_2 <- likeliest_states(HMM_1, HMM_sim2)
+mean(HMM_sim2$states == likely_states_2[[1]]) # Filtered
+mean(HMM_sim2$states == likely_states_2[[2]]) # Smoothed
+mean(HMM_sim2$states == viterbi(HMM_1, HMM_sim2$observation)) # Most probable path
 ```
-
 
 ```{r}
-# TESTING
-HMM_test_sim <- HMM::simHMM(HMM_1, length = 5)
-HMM_test_for <- HMM::forward(HMM_1, observation = HMM_test_sim$observation)
-HMM_test_bac <- HMM::backward(HMM_1, observation = HMM_test_sim$observation)
-#exp(HMM_test_for)
-exp(HMM_test_bac)
-
+print("Simulation 3 accuracies")
+likely_states_3 <- likeliest_states(HMM_1, HMM_sim3)
+mean(HMM_sim3$states == likely_states_3[[1]]) # Filtered
+mean(HMM_sim3$states == likely_states_3[[2]]) # Smoothed
+mean(HMM_sim3$states == viterbi(HMM_1, HMM_sim3$observation)) # Most probable path
 ```
+
+# Problem 6
+It should in general be true that over time, more observations means the accuracy of the estimate of the robots location increases. However, let us investigate this.
+
+```{r}
+library(entropy)
+
+
+alphas <- exp(forward(HMM_1, observation = HMM_sim2$observation))
+#betas <- exp(backward(HMM_1, observation = HMM_sim2$observation))
+filtered_probabilities <- prop.table(alphas, margin=2)
+
+filter_entropy <- c()
+for (i in 1:length(filtered_probabilities[1,])){
+  filter_entropy <- c(filter_entropy, entropy.empirical(filtered_probabilities[,i]))
+}
+
+plot(filter_entropy, type="l", xlab="Time index", ylab="Entropy",
+     main="Fig 3: Entropy over time")
+```
+
+
+# Problem 7
+Now we shall compute the probabilities of the hidden states for time step 101, given the sample in one of the simulations. This can be interpreted as conditioning either on the hidden state in time step 100, or as conditioning on the observation in time step 100. In the first case, we can simply grab the transition probabilities of the row corresponding to that state, as that will give the probabilities of the next state. In the other case, we must first get the possible true hidden states corresponding to the observed state $i$ in observation 100. All those five states are equally likely We can then simply add the rows of those states in the transition probability matrix column wise. 
+
+```{r}
+observation <- HMM_sim1$observation[length(HMM_sim1$observation)]
+possible_hidden_states <- seq(observation-2, observation+2)
+
+# Compute probabilities of future state one step in the future
+prop.table(colSums(transProbs[possible_hidden_states,]))
+```
+
 
 
 
