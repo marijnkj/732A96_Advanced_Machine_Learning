@@ -9,9 +9,6 @@ output: pdf_document
 In this lab we will construct and simulate a Hidden Markov Model where we imagine an agent walking along a cycle of states such that the agent in each time step will stay or move on to the next step with equal probabilities. There are ten states, so the agent can move from state 1 to 2, 2 to 3, etc, and from state 10 to 1. The hidden states in the model will represent the true position of the agent, while the emissions will be randomly selected from the set $\{i-2, i-1, i, i+1, i+2\}$ when the agent is in state $i$. For the simulations, we let the agent start in a uniformly randomly selected state. Below we create the programmatic setup such as the transition probability matrix, the emission probability matrix and the HMM. The states are the integers $1, \cdots, 10$, and in this case so are the emission symbols.
 
 ```{r Setup}
-# This chunk is for like, loading packages, and like doing other kinds of setup
-# like creating the starting probabilities and the transition probability matrix.
-
 library(HMM)
 
 startProbs <- rep(0.1, 10)
@@ -60,7 +57,7 @@ HMM_sim4 <- simHMM(HMM_1, length = 100)
 ```
 
 # Problem 3
-Now we shall use our emission observations above to compute the smoothed and filtered probability distributions using `HMM::backward` and `HMM:forward` respectively. We will also compute the most probable path using the Viterbi algorithm. In Figure 1 below we also visualize the true path (black), the emitted/observed path (blue), and the most probable path (red). We create two custom functions to calculate the most probable "filtered" and "smoothed" states.
+Now we shall use our emission observations above to compute the smoothed and filtered probability distributions using `HMM::backward` and `HMM:forward` respectively. We will also compute the most probable path using the Viterbi algorithm. We create a custom function to calculate the most probable "filtered" and "smoothed" states.
 
 ```{r}
 likeliest_states <- function(HMM, Simulation){
@@ -85,81 +82,80 @@ likely_states_1 <- likeliest_states(HMM_1, HMM_sim1)
 filtered_states_1 <- likely_states_1[[2]]
 smoothed_states_1 <- likely_states_1[[1]]
 
-plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State",
-     main="Fig 2: Most probable states from filtered (red) and smoothed (blue)\n probabilities")
-points(filtered_states_1, type="l", col="red")
-points(smoothed_states_1, type="l", col="blue")
-```
-
-```{r}
-# Visualization of the most probable path,
-# calculated using the Viterbi algorithm
-
 viterbi_run1 <- HMM::viterbi(HMM_1, HMM_sim1$observation)
-plot(HMM_sim1$states, type="l", xlab="Time index", ylab="State",
-     main="Fig 2: Most probable path")
-points(viterbi_run1, type="l", col="red")
 ```
 
 # Problem 4 and 5
-Now compute accuracy of filtered and smoothed probability distributions and of the most probable path.
+Now we compute the accuracy of filtered and smoothed probability distributions and of the most probable path. We find that the smoothed distribution is consistently more accurate than the filtered distribution, which makes sense, since those probabilities are calculated with more knowledge (of all emissions).
+
+The viterbi algorithm essentially works iteratively up from the beginning of the observations, which means that when estimating the true state at a particular time step, it does not use information about the future observed states, even though this is available. Again, this motivates why the smoothing probabilities turn out to be more accurate as state predictors.
 
 ```{r}
-print("Simulation 1 accuracies")
-mean(HMM_sim1$states == likely_states_1[[1]]) # Filtered
-mean(HMM_sim1$states == likely_states_1[[2]]) # Smoothed
-mean(HMM_sim1$states == viterbi_run1) # Most probable path
-```
+# Simulation 1
+likely_states_1 <- likeliest_states(HMM_1, HMM_sim1)
+cat("Simulation 1 accuracies:\n",
+    "Filtered accuracy sim 1: ",  mean(HMM_sim1$states == likely_states_1[[1]]), "\n",
+    "Smoothed accuracy sim 1: ",  mean(HMM_sim1$states == likely_states_1[[2]]), "\n",
+    "Viterbi  accuracy sim 1: ",  mean(HMM_sim1$states == viterbi(HMM_1, HMM_sim1$observation)))
 
-
-```{r}
-print("Simulation 2 accuracies")
+# Simulation 2
 likely_states_2 <- likeliest_states(HMM_1, HMM_sim2)
-mean(HMM_sim2$states == likely_states_2[[1]]) # Filtered
-mean(HMM_sim2$states == likely_states_2[[2]]) # Smoothed
-mean(HMM_sim2$states == viterbi(HMM_1, HMM_sim2$observation)) # Most probable path
-```
+cat("Simulation 2 accuracies:\n",
+    "Filtered accuracy sim 2: ",  mean(HMM_sim2$states == likely_states_2[[1]]), "\n",
+    "Smoothed accuracy sim 2: ",  mean(HMM_sim2$states == likely_states_2[[2]]), "\n",
+    "Viterbi  accuracy sim 2: ",  mean(HMM_sim2$states == viterbi(HMM_1, HMM_sim2$observation)))
 
-```{r}
-print("Simulation 3 accuracies")
+# Simulation 3
 likely_states_3 <- likeliest_states(HMM_1, HMM_sim3)
-mean(HMM_sim3$states == likely_states_3[[1]]) # Filtered
-mean(HMM_sim3$states == likely_states_3[[2]]) # Smoothed
-mean(HMM_sim3$states == viterbi(HMM_1, HMM_sim3$observation)) # Most probable path
+cat("Simulation 3 accuracies:\n",
+    "Filtered accuracy sim 3: ",  mean(HMM_sim3$states == likely_states_3[[1]]), "\n",
+    "Smoothed accuracy sim 3: ",  mean(HMM_sim3$states == likely_states_3[[2]]), "\n",
+    "Viterbi  accuracy sim 3: ",  mean(HMM_sim3$states == viterbi(HMM_1, HMM_sim3$observation)))
 ```
 
 # Problem 6
-It should in general be true that over time, more observations means the accuracy of the estimate of the robots location increases. However, let us investigate this.
+It should in general be true that over time, more observations lead to an increase in accuracy of the estimate of the robots location. In Figure 1 below we see that while there is a slight decrease in the beginning, and some dips into low entropy, the entropy appears to stay around $0.8$. This is likely because of the randomness in the system which will always remain.
 
-```{r}
+```{r, size=5}
 library(entropy)
 
-
+# Compute the filtered probabilities of simulation run 2
 alphas <- exp(forward(HMM_1, observation = HMM_sim2$observation))
-#betas <- exp(backward(HMM_1, observation = HMM_sim2$observation))
 filtered_probabilities <- prop.table(alphas, margin=2)
 
+# Compute entropy of the filtered probabilities
 filter_entropy <- c()
 for (i in 1:length(filtered_probabilities[1,])){
   filter_entropy <- c(filter_entropy, entropy.empirical(filtered_probabilities[,i]))
 }
 
+# Plot entropy over time
 plot(filter_entropy, type="l", xlab="Time index", ylab="Entropy",
-     main="Fig 3: Entropy over time")
+     main="Fig 1: Entropy over time")
 ```
-
 
 # Problem 7
-Now we shall compute the probabilities of the hidden states for time step 101, given the sample in one of the simulations. This can be interpreted as conditioning either on the hidden state in time step 100, or as conditioning on the observation in time step 100. In the first case, we can simply grab the transition probabilities of the row corresponding to that state, as that will give the probabilities of the next state. In the other case, we must first get the possible true hidden states corresponding to the observed state $i$ in observation 100. All those five states are equally likely We can then simply add the rows of those states in the transition probability matrix column wise. 
+Now we consider one of the samples above, and we estimate the probabilities of being in each of the ten states one time step in the future, given all the observed emissions of that sample.
 
 ```{r}
-observation <- HMM_sim1$observation[length(HMM_sim1$observation)]
-possible_hidden_states <- seq(observation-2, observation+2)
+# p(z^(t+1) | x^(1:t))
+probabilities_z101 <- list()
 
-# Compute probabilities of future state one step in the future
-prop.table(colSums(transProbs[possible_hidden_states,]))
+for (state in 1:10){
+  # The next state is the state that the agent potentially will jump to.
+  next_state <- if (state == 10) 1 else state+1
+  
+  if (state == 1) cat("Probabilities of being in state z at time 101, given all the observed states up to time 100\n")
+  
+  # Calculate probability of being in state i in next time step
+  P_staying <- filtered_probabilities[state,100] * 0.5
+  P_moving <- filtered_probabilities[next_state,100] * 0.5
+  prob_of_state <- P_staying + P_moving
+  cat("State", state, ":", prob_of_state, "\n")
+  
+  # Save the probabilities
+  probabilities_z101[[paste0("State", state)]] <- prob_of_state
+}
 ```
-
-
 
 
