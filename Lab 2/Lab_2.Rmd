@@ -22,7 +22,7 @@ n_states <- n_emissions <- 10
 # Fill up the transition probability matrix
 # At any given time point, the robot is in one of the sectors and decides with 
 # equal probability to stay in that sector or move to the next sector.
-transProbs <- matrix(NA, nrow=n_states, ncol=n_states)
+transProbs <- matrix(0, nrow=n_states, ncol=n_states)
 
 for (i in 1:nrow(transProbs)) {
   if (i != nrow(transProbs)) {
@@ -183,3 +183,9 @@ cat("p(z_101 | x_1:100) = \n")
 names(cond_p_z_Tp1) <- 1:n_states
 cond_p_z_Tp1
 ```
+
+Alternative way:
+```{r}
+t(hmm$transProbs) %*% filter_distr[,100]
+```
+
