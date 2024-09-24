@@ -1,6 +1,8 @@
 ---
-title: "Untitled"
+title: "Advanced ML Lab 3"
 author: "Simon Jorstedt"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
+
+# Problem 1
