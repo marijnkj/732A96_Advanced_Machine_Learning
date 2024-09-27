@@ -140,7 +140,6 @@ We hypothesize it to be true that over time, more observations means the accurac
 ```{r}
 # Compute alpha(z_t) and beta(z_t)
 alpha_t <- exp(forward(hmm, obs))
-beta_t <- exp(backward(hmm, obs))
 
 # Normalize distributions
 filter_distr <- prop.table(alpha_t, margin=2)

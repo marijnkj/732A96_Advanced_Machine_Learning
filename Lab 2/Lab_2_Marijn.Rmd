@@ -5,7 +5,7 @@ date: "2024-09-19"
 output: pdf_document
 ---
 
-```{r}
+```{r echo=FALSE}
 library(HMM)
 library(entropy)
 ```
@@ -35,12 +35,14 @@ emissionProbs <- matrix(NA, nrow=n_states, ncol=n_emissions)
 
 for (i in 1:nrow(emissionProbs)) {
   if (i < 3) {
-    emissionProbs[i, (ncol(emissionProbs) - 2 + i):ncol(emissionProbs)] <- 0.2 # End part of the loop
+    # End part of the loop
+    emissionProbs[i, (ncol(emissionProbs) - 2 + i):ncol(emissionProbs)] <- 0.2 
     emissionProbs[i, 1:(i + 2)] <- 0.2 # 1 : i + 2
   }
   else if (i > ncol(emissionProbs) - 2) {
     emissionProbs[i, (i - 2):ncol(emissionProbs)] <- 0.2 # i - 2 : 10
-    emissionProbs[i, 1:(2 - (ncol(emissionProbs) - i))] <- 0.2 # Beginning part of the loop
+    # Beginning part of the loop
+    emissionProbs[i, 1:(2 - (ncol(emissionProbs) - i))] <- 0.2 
   }
   else {
     emissionProbs[i, (i - 2):(i + 2)] <- 0.2 # i - 2 : i + 2
@@ -48,7 +50,8 @@ for (i in 1:nrow(emissionProbs)) {
 }
 
 # Initialize HMM
-hmm <- initHMM(States=c(1:n_states), Symbols=c(1:n_emissions), transProbs=transProbs, emissionProbs=emissionProbs)
+hmm <- initHMM(States=c(1:n_states), Symbols=c(1:n_emissions), 
+               transProbs=transProbs, emissionProbs=emissionProbs)
 ```
 
 # Question 2
@@ -58,7 +61,8 @@ n_steps <- 100
 sim <- simHMM(hmm, n_steps)
 
 for (i in 1:5) {
-  cat("Time ", i, "\nState: ", sim$states[i], "\nObservation: ", sim$observation[i], "\n\n")
+  cat("Time ", i, "\nState: ", sim$states[i], "\nObservation: ", 
+      sim$observation[i], "\n\n")
 }
 cat("...")
 ```
@@ -132,7 +136,6 @@ The smoothed distributions should be more accurate because it uses more informat
 ```{r}
 # Compute alpha(z_t) and beta(z_t)
 alpha_t <- exp(forward(hmm, obs))
-beta_t <- exp(backward(hmm, obs))
 
 # Normalize distributions
 filter_distr <- prop.table(alpha_t, margin=2)
@@ -175,8 +178,3 @@ cat("p(z_101 | x_1:100) = \n")
 names(cond_p_z_Tp1) <- 1:n_states
 cond_p_z_Tp1
 ```
-
-
-
-
-
