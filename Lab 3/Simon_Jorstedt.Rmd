@@ -5,4 +5,18 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-# Problem 1
+# Problem 2.1
+
+# Problem 2.2 - Environment A
+
+
+```{r}
+
+current_state <- c(1,3)
+for (i in 1:3){
+  q_learning(current_state)
+}
+
+vis_environment()
+```
+
