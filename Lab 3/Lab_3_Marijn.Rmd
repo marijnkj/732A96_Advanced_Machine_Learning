@@ -157,26 +157,25 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
 
   # Initialize state
   state <- start_state
+  episode_correction <- 0
   
-  corr_term <- c()
-  j <- 1
   repeat{
     # Follow policy, execute action, get reward.
     e_greedy_action <- EpsilonGreedyPolicy(state[1], state[2], epsilon)
     next_state <- transition_model(state[1], state[2], e_greedy_action, beta)
-    reward <- reward_map[state[1], state[2]]
-    
+    reward <- reward_map[next_state[1], next_state[2]]
+
+    # cat("State: ", state, "\nNext state: ", next_state, "\nReward: ", reward, "\n\n")
     # Q-table update.
-    corr_term[i] <- reward + gamma * max(q_table[next_state[1], next_state[2],]) - q_table[state[1], state[2], e_greedy_action]
-    q_table[state[1], state[2], e_greedy_action] <<- q_table[state[1], state[2], e_greedy_action] + alpha * (corr_term[i])
+    step_corr <- reward + gamma * max(q_table[next_state[1], next_state[2],]) - q_table[state[1], state[2], e_greedy_action]
+    q_table[state[1], state[2], e_greedy_action] <<- q_table[state[1], state[2], e_greedy_action] + alpha * step_corr
     
     # Reset the state
     state <- next_state
-    j <- j + 1
-    
+    episode_correction <- episode_correction + step_corr
+
     if(reward != 0) {
       # End episode.
-      episode_correction <- sum(corr_term)
       return (c(reward, episode_correction))
     }
   }
@@ -204,6 +203,8 @@ for(i in 1:10000){
     vis_environment(i)
 }
 ```
+
+After the first 10 episodes, the agent has learnt essentially nothing. In some places it knows it probably shouldn't go into the -1 block, but not with a very convincing Q-value. After 10,000 episodes, the agent has learnt a policy that will always get it to goal, though not necessarily in the smallest number of moves. The left side of the grid world did not get updated as often as the right side, probably because thet agent quickly learnt to get out of there and explore the right side of the map. Additionally the rightmost column has been explored slightly less, and has good policy but could go to goal faster. The agent has learnt that the only way to go around the negative block is by going down, even when it starts at the very top. It could be interesting to change epsilon such that more random actions are taken in the beginning, perhaps degrading epsilon over time so that once the agent has explored and learnt good policies it sticks to that policy more often. Currently it seems that it has learnt a path that works and keeps to that. 
 
 # Question 2.3 - Environment B
 ```{r envB, echo=FALSE}
@@ -261,6 +262,8 @@ for(j in c(0.5,0.75,0.95)){
   plot(MovingAverage(correction,100),type = "l")
 }
 ```
+
+
 
 # Question 2.4 - Environment C
 ```{r envC, echo=FALSE}
