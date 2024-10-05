@@ -200,6 +200,7 @@ for(i in 1:10000){
 
 After 10 episodes, the agent has learned very little, but it does appear as if the agent has identified the row of blocks with negative reward. It also appears as though the agent ended up in the 10 reward state in at least one of the episodes. Much remains to be learned. After 10.000 iterations the agent has learned a policy that leads to the 10 reward state in each episode, regardless of the starting state, but it is not optimal, since the greedy move in state (5,4) will lead to an unnecessarily long route. The learned q-values do not reflect that the agent has learned to walk either above or below the negative rewards, since again, it appears to walk backwards above the negative blocks. To facilitate learning that there are two paths, we could try training the agent for more episodes, since it could be due to a lack of experience in state (5,4). Another interesting option is to lower the discount factor $\gamma$ somewhat, in order to penalize rewards far in the future, which might help the agent identify the shorter path to the 10 reward.
 
+# Problem 2.3 - Environment B
 
 ```{r Environment B}
 # Environment B (the effect of epsilon and gamma)
@@ -258,14 +259,11 @@ for(j in c(0.5,0.75,0.95)){
 }
 ```
 
- Your task is to investigate how the and parameters affect the learned policy by running
- 30000 episodes of Q-learning with = 0105, = 05075095, = 0 and = 01. To do so,
- simply run the code provided in the file RL
- Lab1.R and explain your observations.
+In the plots above, we see that as $\gamma$ increases from $0.5$ to $0.75$ to $0.95$, the agent becomes more and more likely to choose a path to the 10-reward state rather than the 5-reward state. But even for $\gamma = 0.75$ the agent still chooses the 5-reward state when starting in a y-position equal to or lower (left of) the 5-reward state which makes up a majority of all starting states. For $\gamma = 0.95$ however, the agent has learned to fully avoid the 5-reward state, and instead chooses to go around it, heading for the 10-reward state. This behavior also shows up in the moving average reward and correction plots. When $\gamma=0.95$ we see that the agent fairly quickly find the 5-reward state, and so the reward stays around 5, until it finds the 10-reward state, and so there is a jump in the typical reward to 10 shortly after episode $20.000$. As expected, there is also a sudden jump in the average correction at that time, which then dies out.
 
-In the plots above, we see that as $\gamma$ increases from $0.5$ to $0.75$ to $0.95$, the agent becomes more and more likely to choose a path to the 10-reward state rather than the 5-reward state. But even for $\gamma = 0.75$ the agent still chooses the 5-reward state when starting in a y-position equal to or lower (left of) the 5-reward state which make up a majority of all starting states. For $\gamma = 0.95$ however, the agent has learned to fully avoid the 5-reward state, and instead chooses to go around it, heading for the 10-reward state.
+We also see in the plots that a quite low $\epsilon = 0.1$ prevents the agent from learning of the 10-reward state, even for a high $\gamma = 0.95$ which encourages rewards in the long term.
 
-
+# Problem 2.4 - Environment C
 
 ```{r}
 # Environment C (the effect of beta).
@@ -290,4 +288,16 @@ for(j in c(0,0.2,0.4,0.66)){
   vis_environment(i, gamma = 0.6, beta = j)
 }
 ```
+
+In the figures above, we see clearly that for a low $\beta$ (up to and including $0.2$), the agent has learnt to take the shortest path to the 10-reward state, since the probability of accidentally "slipping" into the negative reward states is only $0.1$ (for each step in a "danger zone" state). However, when $\beta$ is taken to be larger than this ($0.4$, and $0.66$), the agent learns that there is a high probability of accidentally slipping into one of the negative reward states.
+
+
+
+# Problem 2.6 - Environment D
+The agent does learn a good policy for each of the eight goal states, with just some slight inefficiencies in states (4,1) and (3,1) when the goal is in states (4,2) and (3,2) respectively. This is because the problem is not very difficult, and could probably be solved with Q-learning, since it is very similar to the problem in the previous problems (Environments A-C).
+
+# Problem 2.7 - Environment E
+This time the agent does not perform as well. It appears as though the training goals, and the validation goals are different enough that the learned policy does not help the agent to find the validation goals. The agent just learns to go straight up which is far from optimal when the validation goals are below the top row. These results differ from in Environment D, where the training and validation goals where similar enough that the learned policy generalized sufficiently.
+
+
 
