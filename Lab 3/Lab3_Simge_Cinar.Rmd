@@ -219,7 +219,7 @@ for(i in 1:10000){
 
 *What has the agent learned after the first 10 episodes ?* 
 
-The agent doesn't learn much after 10 iterations. It only learned the some parts of the obstacles in the reward map.
+The agent doesn't learn much after 10 iterations. It only learned the some parts of the obstacles (which has value -1 in the reward map).
 
 *Is the final greedy policy (after 10000 episodes) optimal for all states, i.e. not only for the initial state ? Why / Why not ?* 
 
@@ -227,7 +227,7 @@ No, even though the agent learns to find the reward, it tends to take a longer p
 
 *Do the learned values in the Q-table reflect the fact that there are multiple paths (above and below the negative rewards) to get to the positive reward ? If not, what could be done to make it happen ?* 
 
-The Q-table assigns higher values to safer paths but agent learns only one path to reach to goal when it is left side of the block. Decreasing epsilon value more in time could give the agent explore more in the beginning and exploit more in the end.
+The Q-table assigns higher values to safer paths but the agent learns only one path to reach to reward for the states that are above, below and left side of the obstacle (y<=3). Decreasing epsilon value more in time could give the agent explore more in the beginning and exploit more in the end.
 
 # Question 2.3 - Environment B
 ```{r, warning=FALSE}
@@ -294,9 +294,9 @@ for(j in c(0.5,0.75,0.95)){
 
 *Investigate how $\epsilon$ and $\gamma$  parameters affect the learned policy by running 30000 episodes of Q-learning with $\epsilon = 0.1, 0.5$, $\gamma = 0.5, 0.75, 0.95$, $\beta = 0$ and and $\alpha = 0.1$.*
 
-$\epsilon$ parameter determines how often the agent explores new actions versus exploiting the best-known action and $\gamma$ parameter determines how much future rewards are taken into account. When $\epsilon = 0.5$ and $\gamma = 0.5$, the agent learns the path for the reward 5, it can only learn the path to reward 10 when it is near the goal with reward 10. In some states, even though goal with reward 10 is closer, the path leads to reward 5, such as in state (2,7). While keeping the $\epsilon$ parameter same and increasing the $\gamma$ parameter, we observe that agent takes into account future reward more and in the case where $\gamma = 0.95$, all states leads to goal with reward 10. 
+$\epsilon$ parameter determines how often the agent explores new actions versus exploiting the best-known action and $\gamma$ parameter determines how much future rewards are taken into account. When $\epsilon = 0.5$ and $\gamma = 0.5$, the agent learns the path for the reward-5, it can only learn the path to reward-10 when it is near the reward-10. In some states, even though reward-10 is closer, the path leads to reward-5, such as in state (2,7). While keeping the $\epsilon$ parameter same and increasing the $\gamma$ parameter, we can observe that agent takes into account future reward more and in the case where $\gamma = 0.95$, almost all states leads to reward-10. 
 
-When $\epsilon = 0.1$, the agent chooses random action 10% of the time. It can be observed that even though the agent can learn the path to goal with reward 10 when $\gamma$ value is high, it chooses the longer path.
+When $\epsilon = 0.1$, the agent chooses random action 10% of the time. It can be observed that even though the agent can learn the path to reward-10 when $\gamma$ value is high, it chooses the longer path.
  
 
 # Question 2.4 - Environment C
@@ -326,7 +326,7 @@ for(j in c(0,0.2,0.4,0.66)){
 
 *Your task is to investigate how the $\beta$ parameter affects the learned policy by running 10000 episodes of Q-learning with $\beta = 0, 0.2, 0.4, 0.66$, $\epsilon = 0.5$, $\gamma = 0.6$ and $\alpha = 0.1$.* 
 
-The agent follows the intended action with probability $(1 - \beta)$. With high $\beta$ value, the agent frequently slips and making the environment more stochastic. It can be observed that when $\beta = 0.2$, it cannot find the reward on the state (1,1) - left side of the obstacle.
+The agent follows the intended action with probability $(1 - \beta)$. With high $\beta$ value, the agent frequently slips and making the environment more stochastic. It can be observed that when $\beta = 0.2$, it cannot find the reward at the state (1,1) - on the left side of the obstacle.
 
 # Question 2.6 - Environment D
 *Has the agent learned a good policy? Why / Why not ?* 
