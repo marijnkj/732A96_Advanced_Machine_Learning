@@ -16,7 +16,7 @@ library(ggplot2)
 ```
 
 # Statement of Contribution
-We solved the assignment individually and compared our answers. We have similar answers for each question expect for 2.6
+We solved the assignment individually and compared our answers. We have similar answers for each question except for 2.6
 
 # Implementation
 
@@ -332,7 +332,7 @@ The agent follows the intended action with probability $(1 - \beta)$. As beta in
 
 We can say that the agent learned a good policy because almost all initial states lead to goal, except for the map in validation data 1 state (4,1). Also, in the first and third map there is a position in which the agent would end up in a loop if it were to strictly follow the most likely action, but other than that the policies are perfect. 
 
-According to Marjin, this task could not have been solved using Q-learning, as in Q-learning the goal is not known to the agent and future rewards would become irrelevant in a different episode. According to Simon the problem is not very difficult, and could probably be solved with Q-learning, since it is very similar to the problem in the previous problems (Environments A-C). Simge thinks that this problem can be solved using Q-learning since it's not too big but it requires a new reward map each time the goal changes its location and it is not memory efficient.
+According to Marijn, this task could not have been solved using Q-learning, as in Q-learning the goal is not known to the agent and future rewards would become irrelevant in a different episode. According to Simon the problem is not very difficult, and could probably be solved with Q-learning, since it is very similar to the problem in the previous problems (Environments A-C). Simge thinks that this problem can be solved using Q-learning since it's not too big but it requires a new reward map each time the goal changes its location and it is not memory efficient.
 
 ## Question 2.7 - Environment E
 *Has the agent learned a good policy? Why / Why not ? If the results obtained for environments D and E differ, explain why.*
