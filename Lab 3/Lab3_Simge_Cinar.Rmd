@@ -221,7 +221,7 @@ for(i in 1:10000){
 The agent doesn't learn much after 10 iterations. It only learned the some parts of the obstacles in the reward map.
 
 *Is the final greedy policy (after 10000 episodes) optimal for all states, i.e. not only for the initial state ? Why / Why not ?* \
-No, even though the agent learns to find the reward, it tends to take a longer path when starting below the obstacle, specifically from state (3,1).
+No, even though the agent learns to find the reward, it tends to take a longer path when it starts below the obstacle, specifically from the state (3,1).
 
 *Do the learned values in the Q-table reflect the fact that there are multiple paths (above and below the negative rewards) to get to the positive reward ? If not, what could be done to make it happen ?* \
 The Q-table assigns higher values to safer paths but agent learns only one path to reach to goal when it is left side of the block. Decreasing epsilon value more in time could give the agent explore more in the beginning and exploit more in the end.
@@ -290,8 +290,8 @@ for(j in c(0.5,0.75,0.95)){
 
 
 *Investigate how $\epsilon$ and $\gamma$  parameters affect the learned policy by running 30000 episodes of Q-learning with $\epsilon = 0.1, 0.5$, $\gamma = 0.5, 0.75, 0.95$, $\beta = 0$ and and $\alpha = 0.1$.*\
-$\epsilon$ parameter determines how often the agent explores new actions versus exploiting the best-known action and $\gamma$ parameter determines how much future rewards are taken into account. When $\epsilon = 0.5$ and $\gamma = 0.5$, the agent learns the path for the reward 5, it can only learn the path to reward 10 when it is around that state. Even though reward 10 is closer, the path leads to reward 5, such as in state (2,7). When keeping $\epsilon$ the same and increasing the $\gamma$ parameter, we observe that agent takes into account future reward more and in that case where $\gamma = 0.95$, all states leads to reward 10. \
-When $\epsilon = 0.1$, the agent chooses random action 10% of the time. It can observed that even though the agent can learn the path to reward 10 with high $\gamma$ value, it chooses the longer path.
+$\epsilon$ parameter determines how often the agent explores new actions versus exploiting the best-known action and $\gamma$ parameter determines how much future rewards are taken into account. When $\epsilon = 0.5$ and $\gamma = 0.5$, the agent learns the path for the reward 5, it can only learn the path to reward 10 when it is near the goal with reward 10. In some states, even though goal with reward 10 is closer, the path leads to reward 5, such as in state (2,7). While keeping the $\epsilon$ parameter same and increasing the $\gamma$ parameter, we observe that agent takes into account future reward more and in the case where $\gamma = 0.95$, all states leads to goal with reward 10. \
+When $\epsilon = 0.1$, the agent chooses random action 10% of the time. It can be observed that even though the agent can learn the path to goal with reward 10 when $\gamma$ value is high, it chooses the longer path.
  
 
 # Question 2.4 - Environment C
@@ -328,7 +328,6 @@ The agent follows the intended action with probability $(1 - \beta)$. With high 
 We can say that the agent learned a good policy because almost all initial states lead to goal, except for validation data 1 state (x = 4, y = 1)
 *Could you have used the Q-learning algorithm to solve this task ?* \
 This problem can be solved using Q-learning since it's not too big but we need a new reward map each time the goal changes it's location and it's not memory efficient.
-
 
 # Question 2.7 - Environment E
 *Has the agent learned a good policy? Why / Why not ?*\
