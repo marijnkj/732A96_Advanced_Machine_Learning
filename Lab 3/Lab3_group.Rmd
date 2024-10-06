@@ -1,6 +1,6 @@
 ---
 title: "Advanced Machine Learning Lab 3"
-author: "Simge Cinar"
+author: "Simon Jorstedt, Marijn Jaarsma, Simge Cinar"
 date: "2024-10-06"
 output:
   pdf_document: 
@@ -14,6 +14,11 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 ```
+
+# Statement of Contribution
+We solved the assignment individually and compared our answers. We have similar answers for each question expect for 2.6
+
+# Implementation
 
 First let's define the necessary functions
 
@@ -84,7 +89,7 @@ GreedyPolicy <- function(x, y){
   # Returns:
   #   An action, i.e. integer in {1,2,3,4}.
   
-  # Your code here. SIMGE:
+  # Your code here. 
   q_values <- q_table[x, y, ] # gives the values of 4 actions for a specific location
   greedy_action <- which.max(q_values) # chooses the best action with maximum value
   return(greedy_action)
@@ -103,7 +108,7 @@ EpsilonGreedyPolicy <- function(x, y, epsilon){
   # Returns:
   #   An action, i.e. integer in {1,2,3,4}.
   
-  # Your code here. SIMGE:
+  # Your code here. 
   # explore with prob epsilon, greedy action wih prob 1-epsilon
   rand_num <- runif(1)
   action <- ifelse(rand_num < epsilon, sample(1:4, 1), GreedyPolicy(x,y))
@@ -158,7 +163,7 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
   #   q_table (global variable): Recall that R passes arguments by value. So, q_table being
   #   a global variable can be modified with the superassigment operator <<-.
   
-  # Your code here. SIMGE:
+  # Your code here. 
   
   # Initialize the variables
   state_x <- start_state[1]
@@ -195,7 +200,7 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
 }
 ```
 
-# Question 2.2 - Environment A
+## Question 2.2 - Environment A
 ```{r}
 H <- 5
 W <- 7
@@ -217,19 +222,12 @@ for(i in 1:10000){
 }
 ```
 
-*What has the agent learned after the first 10 episodes ?* 
+*What has the agent learned after the first 10 episodes ? Is the final greedy policy (after 10000 episodes) optimal for all states, i.e. not only for the initial state ? Why / Why not ? Do the learned values in the Q-table reflect the fact that there are multiple paths (above and below the negative rewards) to get to the positive reward ? If not, what could be done to make it happen ?* 
 
-The agent doesn't learn much after 10 iterations. It only learned the some parts of the obstacles in the reward map.
+The agent doesn't learn much after 10 iterations. It only learned the some parts of the obstacles, which has -1 value in the reward map. After 10,000 iterations, even though the agent learns to find the reward regardless of the starting state, not with the smallest number of moves in each state. It can be observed that it tends to take a longer path when it starts below the obstacle, specifically from the state (1,3). The left side of the grid world did not get updated as often as the right side, probably because the agent quickly learnt to get out of there and explore the right side of the map. Additionally the rightmost column has been explored slightly less, and has good policy but could go to goal faster. The agent has learnt that the only way to go around the negative block is by going down, even when it starts at the very top. It could be interesting to change epsilon value, decreasing it more in time could give the agent explore more in the beginning and exploit more in the end. Currently it seems that it has learnt a path that works and keeps to that.Also we could try training the agent for more episodes or lower the discount factor $\gamma$ somewhat, in order to penalize rewards far in the future, which might help the agent identify the shorter path to the 10 reward.
 
-*Is the final greedy policy (after 10000 episodes) optimal for all states, i.e. not only for the initial state ? Why / Why not ?* 
 
-No, even though the agent learns to find the reward, it tends to take a longer path when it starts below the obstacle, specifically from the state (1,3).
-
-*Do the learned values in the Q-table reflect the fact that there are multiple paths (above and below the negative rewards) to get to the positive reward ? If not, what could be done to make it happen ?* 
-
-The Q-table assigns higher values to safer paths but agent learns only one path to reach to goal when it is left side of the block. Decreasing epsilon value more in time could give the agent explore more in the beginning and exploit more in the end.
-
-# Question 2.3 - Environment B
+## Question 2.3 - Environment B
 ```{r, warning=FALSE}
 H <- 7
 W <- 8
@@ -294,12 +292,12 @@ for(j in c(0.5,0.75,0.95)){
 
 *Investigate how $\epsilon$ and $\gamma$  parameters affect the learned policy by running 30000 episodes of Q-learning with $\epsilon = 0.1, 0.5$, $\gamma = 0.5, 0.75, 0.95$, $\beta = 0$ and and $\alpha = 0.1$.*
 
-$\epsilon$ parameter determines how often the agent explores new actions versus exploiting the best-known action and $\gamma$ parameter determines how much future rewards are taken into account. When $\epsilon = 0.5$ and $\gamma = 0.5$, the agent learns the path for the reward 5, it can only learn the path to reward 10 when it is near the goal with reward 10. In some states, even though goal with reward 10 is closer, the path leads to reward 5, such as in state (2,7). While keeping the $\epsilon$ parameter same and increasing the $\gamma$ parameter, we observe that agent takes into account future reward more and in the case where $\gamma = 0.95$, all states leads to goal with reward 10. 
+$\epsilon$ parameter determines how often the agent explores new actions versus exploiting. When it is lower, the agent explores less. When epsilon is low, the policy is focused around getting to 5 and sticks to that as the optimal policy because it never gets to explore beyond and realize there is a greater reward behind it. When epsilon is higher, however, the agent learns there is a 10 reward behind the 5, and gets to explore that region of the map. When $\epsilon = 0.5$ and $\gamma = 0.75$, the agent learns the path for the reward 5, it can only learn the path to reward 10 when it is near reward 10. In some states, even though reward 10 is closer, the path leads to reward 5, such as in state (2,7).
 
-When $\epsilon = 0.1$, the agent chooses random action 10% of the time. It can be observed that even though the agent can learn the path to goal with reward 10 when $\gamma$ value is high, it chooses the longer path.
- 
+$\gamma$ parameter determines how much future rewards are taken into account. When $\gamma$ is lower, the agent values immediate rewards higher. But even for $\gamma = 0.75$ the agent still chooses the 5-reward state when starting in a y-position equal to or lower (left of) the 5-reward state which makes up a majority of all starting states. For $\gamma = 0.95$ however, the agent has learned to fully avoid the 5-reward state, and instead chooses to go around it, heading for the 10-reward state. Furthermore keeping $\epsilon$ constant, it can be seen that the average corrections get a bit bigger as $\gamma$ increases. This is because, as $\gamma$ grows, a bigger portion of the future reward is being added to the correction. This is especially striking when $\epsilon$ is low, because when $\gamma$ is very high the agent still eventually realizes there is a greater goal beyond the first, and trains its policy to go there instead. These moments of realization can be seen from the moving average plots when there is a sudden jump in the reward and correction.
 
-# Question 2.4 - Environment C
+
+## Question 2.4 - Environment C
 ```{r}
 H <- 3
 W <- 6
@@ -324,27 +322,22 @@ for(j in c(0,0.2,0.4,0.66)){
 }
 ```
 
-*Your task is to investigate how the $\beta$ parameter affects the learned policy by running 10000 episodes of Q-learning with $\beta = 0, 0.2, 0.4, 0.66$, $\epsilon = 0.5$, $\gamma = 0.6$ and $\alpha = 0.1$.* 
+*Investigate how the $\beta$ parameter affects the learned policy by running 10000 episodes of Q-learning with $\beta = 0, 0.2, 0.4, 0.66$, $\epsilon = 0.5$, $\gamma = 0.6$ and $\alpha = 0.1$.* 
 
-The agent follows the intended action with probability $(1 - \beta)$. With high $\beta$ value, the agent frequently slips and making the environment more stochastic. It can be observed that when $\beta = 0.2$, it cannot find the reward on the state (1,1) - left side of the obstacle.
+The agent follows the intended action with probability $(1 - \beta)$. As beta increases, the probability of the agent slipping becomes higher. This means it thinks it has performed an action $a$, but has actually moved to the left or right of that chosen action will probability $\beta/2$, leading to incorrect updates of the Q-table. The agent has learnt to take the shortest path to the 10-reward state, since the probability of accidentally "slipping" into the negative reward states is only $0.1$ (for each step in a "danger zone" state). However, when $\beta$ is taken to be larger than this ($0.4$, and $0.66$), the agent learns that there is a high probability of accidentally slipping into one of the negative reward states.
 
-# Question 2.6 - Environment D
-*Has the agent learned a good policy? Why / Why not ?* 
 
-We can say that the agent learned a good policy because almost all initial states lead to goal, except for validation data 1 state (x = 4, y = 1)
+## Question 2.6 - Environment D
+*Has the agent learned a good policy? Why / Why not ? Could you have used the Q-learning algorithm to solve this task ?* 
 
-*Could you have used the Q-learning algorithm to solve this task ?* 
+We can say that the agent learned a good policy because almost all initial states lead to goal, except for the map in validation data 1 state (4,1). Also, in the first and third map there is a position in which the agent would end up in a loop if it were to strictly follow the most likely action, but other than that the policies are perfect. 
 
-This problem can be solved using Q-learning since it's not too big but we need a new reward map each time the goal changes it's location and it's not memory efficient.
+According to Marjin, this task could not have been solved using Q-learning, as in Q-learning the goal is not known to the agent and future rewards would become irrelevant in a different episode. According to Simon the problem is not very difficult, and could probably be solved with Q-learning, since it is very similar to the problem in the previous problems (Environments A-C). Simge thinks that this problem can be solved using Q-learning since it's not too big but it requires a new reward map each time the goal changes its location and it is not memory efficient.
 
-# Question 2.7 - Environment E
-*Has the agent learned a good policy? Why / Why not ?*
+## Question 2.7 - Environment E
+*Has the agent learned a good policy? Why / Why not ? If the results obtained for environments D and E differ, explain why.*
 
-No it couldn't learn a good policy because even the states near the goal cannot lead to the goal
-
-*If the results obtained for environments D and E differ, explain why.*
-
-Yes, they differ because in environment E, the model is trained with only top row goal positions hence generally the best policy is to move up for the agent
+This time the agent does not perform as well, even the states near the goal cannot lead to the goal. It appears as though the training goals, and the validation goals are different enough that the learned policy does not help the agent to find the validation goals. The agent just learns to go straight up which is far from optimal when the validation goals are below the top row. The results here are different from environment D, because in environment D the agent was trained on random goals across the board. Here, however, the agent has learnt that the goal will likely be in some section of it, so it doesn't want to go in a completely different direction.
 
 
 
