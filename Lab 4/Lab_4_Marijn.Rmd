@@ -1,0 +1,59 @@
+---
+title: "Lab 4"
+author: "Marijn Jaarsma"
+date: "2024-10-09"
+output: html_document
+---
+
+```{r}
+library(kernlab)
+```
+
+```{r}
+posteriorGP <- function(X, y, XStar, sigmaNoise, k) {
+  res <- list()
+  
+  # Compute covariance and Cholesky decomposition
+  K <- k(X, X)
+  L <- t(chol(K + sigmaNoise * diag(dim(K)[1])))
+  
+  # Compute predictive mean
+  k_star <- k(X, XStar)
+  alpha <- solve(t(L), solve(L, y))
+  res$pred_mean <- t(k_star) %*% alpha
+  
+  # Compute predictive variance
+  v <- solve(L, k_star)
+  res$pred_var <- k(XStar, XStar) - t(v) %*% v
+  
+  # Compute log marginal likelihood
+  n <- length(y)
+  res$log_marg_lik <- -0.5 * t(y) %*% alpha - sum(log(diag(L)) - n/2 * log(2 * pi))
+
+  return(res)
+}
+```
+
+```{r}
+# Hyperparameters
+sigmaF <- 1
+l <- 0.3
+
+# Covariance function
+SquaredExpKernel <- function(x1, x2, sigmaF=sigmaF, l=l){
+  n1 <- length(x1)
+  n2 <- length(x2)
+  K <- matrix(NA,n1,n2)
+  for (i in 1:n2){
+    K[,i] <- sigmaF^2*exp(-0.5*( (x1-x2[i])/l)^2 )
+  }
+  return(K)
+}
+
+# Assumptions and data
+sigmaNoise <- 0.1
+X <- 0.4
+y <- 0.719
+
+
+```
