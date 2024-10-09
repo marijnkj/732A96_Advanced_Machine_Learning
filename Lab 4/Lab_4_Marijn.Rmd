@@ -36,11 +36,11 @@ posteriorGP <- function(X, y, XStar, sigmaNoise, k) {
 
 ```{r}
 # Hyperparameters
-sigmaF <- 1
-l <- 0.3
+sigmaF_hyp <- 1
+l_hyp <- 0.3
 
 # Covariance function
-SquaredExpKernel <- function(x1, x2, sigmaF=sigmaF, l=l){
+SquaredExpKernel <- function(x1, x2, sigmaF=sigmaF_hyp, l=l_hyp){
   n1 <- length(x1)
   n2 <- length(x2)
   K <- matrix(NA,n1,n2)
@@ -55,5 +55,14 @@ sigmaNoise <- 0.1
 X <- 0.4
 y <- 0.719
 
+X_grid <- seq(-1, 1,)
+means <- c()
+vars <- c()
+for (Xstar in X_grid) {
+  res <- posteriorGP(X, y, X, sigmaNoise, SquaredExpKernel)  
+  means <- append(means, res$pred_mean)
+  vars <- append(vars, res$pred_var)
+}
 
+plot(means)
 ```
