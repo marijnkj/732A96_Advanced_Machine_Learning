@@ -9,6 +9,7 @@ output: html_document
 library(kernlab)
 ```
 
+# Question 2.1.1
 ```{r}
 posteriorGP <- function(X, y, XStar, sigmaNoise, k) {
   res <- list()
@@ -34,6 +35,7 @@ posteriorGP <- function(X, y, XStar, sigmaNoise, k) {
 }
 ```
 
+# Question 2.1.2
 ```{r}
 # Hyperparameters
 sigmaF_hyp <- 1
@@ -55,14 +57,111 @@ sigmaNoise <- 0.1
 X <- 0.4
 y <- 0.719
 
-X_grid <- seq(-1, 1,)
+X_grid <- seq(-1, 1, length.out=100)
 means <- c()
 vars <- c()
-for (Xstar in X_grid) {
-  res <- posteriorGP(X, y, X, sigmaNoise, SquaredExpKernel)  
+for (XStar in X_grid) {
+  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
   means <- append(means, res$pred_mean)
   vars <- append(vars, res$pred_var)
 }
 
-plot(means)
+# Plot means with 95% CI
+plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 1 data point")
+lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
+lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+```
+
+# Question 2.1.3
+```{r}
+X <- append(X, -0.6)
+y <- append(y, -0.044)
+
+means <- c()
+vars <- c()
+for (XStar in X_grid) {
+  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
+  means <- append(means, res$pred_mean)
+  vars <- append(vars, res$pred_var)
+}
+
+# Plot means with 95% CI
+plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 2 data points")
+lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
+lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+```
+# Question 2.1.4
+```{r}
+X <- c(-1, -0.6, -0.2, 0.4, 0.8)
+y <- c(0.768, -0.044, -0.94, 0.719, -0.664)
+
+means <- c()
+vars <- c()
+for (XStar in X_grid) {
+  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
+  means <- append(means, res$pred_mean)
+  vars <- append(vars, res$pred_var)
+}
+
+# Plot means with 95% CI
+plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 2 data points")
+lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
+lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+```
+
+# Question 2.1.5
+```{r}
+sigmaF_hyp <- l_hyp <- 1
+
+X <- c(-1, -0.6, -0.2, 0.4, 0.8)
+y <- c(0.768, -0.044, -0.94, 0.719, -0.664)
+
+means <- c()
+vars <- c()
+for (XStar in X_grid) {
+  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
+  means <- append(means, res$pred_mean)
+  vars <- append(vars, res$pred_var)
+}
+
+# Plot means with 95% CI
+plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 2 data points")
+lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
+lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+```
+
+# 2.2.1
+```{r}
+# Read data
+df <- read.csv("https://github.com/STIMALiU/AdvMLCourse/raw/master/GaussianProcess/Code/TempTullinge.csv", header=TRUE, sep=";")
+
+# Convert string date column to date type
+df["date"] <- lapply(df["date"], strptime, format=date_format, tz="UTC") # UTC to ignore Daylight Savings Time differences
+df["time"] <- lapply(df["date"], difftime, time2=df[1, "date"], units="days")
+df$time <- as.numeric(df$time)
+# Define kernel
+square_exponential_kernel <- function(x1, x2, ell=ell_hyp, sigmaf=sigmaf_hyp) {
+  return (sigmaf ** 2 * exp(-sqrt(sum((x1 - x2) ** 2)) ** 2 / (2 * ell ** 2)))
+}
+class(square_exponential_kernel) <- "kernel"
+
+# Define data and set random hyper parameters and run kernel
+X <- c(1, 3, 4)
+X_star <- c(2, 3, 4)
+ell_hyp <- 0.3
+sigmaf_hyp <- 1
+
+kernelMatrix(square_exponential_kernel, X, X_star)
+```
+
+# 2.2.2
+```{r}
+lin_mod <- lm("temp ~ time", df)
+sigma_n_2 <- var(lin_mod$residuals)
+
+ell_hyp <- 100
+sigmaf_hyp <- 20
+
+mod <- gausspr(df["time"], df["temp"], kernel=square_exponential_kernel, kpar=list(ell_hyp, sigmaf_hyp), scaled=FALSE)
+
 ```
