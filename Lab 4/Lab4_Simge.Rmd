@@ -1,0 +1,199 @@
+---
+title: "Advanced Machine Learning Lab 4"
+author: "Simge Cinar"
+date: "2024-10-13"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+    fig_width: 6
+    fig_height: 4
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(kernlab)
+```
+
+# Question 1
+
+I implemented the posterior distribution of f using squared exponential kernel which returns a vector with posterior mean and variance of f. It was assumed that prior mean of f is zero for all x 
+```{r}
+# (1) define a function for the posterior distribution of f
+
+# Covariance function from the course web page
+SquaredExpKernel <- function(x1, x2, sigmaF=1, l=3){
+  n1 <- length(x1)
+  n2 <- length(x2)
+  K <- matrix(NA,n1,n2)
+  for (i in 1:n2){
+    K[,i] <- sigmaF^2*exp(-0.5*( (x1-x2[i])/l)^2 )
+  }
+  return(K)
+}
+
+# X: Vector of training inputs.
+# y: Vector of training targets/outputs.
+# XStar: Vector of inputs where the posterior distribution is evaluated, i.e. X∗.
+# sigmaNoise: Noise standard deviation sigma_n.
+# k: Covariance function or kernel. That is, the kernel should be a separate function
+
+posteriorGP <- function(X, y, XStar, sigmaNoise, k, ...){
+  # '...' allows passing additional parameters to the kernel function
+  
+  n <- length(X)
+  K <- k(X, X, ...)
+  KStar <- k(X, XStar, ...)
+  
+  # Take the transpose since the algorithm in the book is a lower triangular matrix, whereas the R function   returns an upper triangular matrix.
+  L <- t(chol(K+ sigmaNoise^2 * diag(n)))  # SIMGE: Should I take square here ??
+  alpha <- solve(t(L), solve(L,y))
+  fStar <- t(KStar) %*% alpha
+  v <- solve(L, KStar)
+  V_fStar <- k(XStar,XStar, ...) - t(v) %*% v
+  logp <- -1/2 %*% t(y) %*% alpha - sum(log(diag(L)))- (n/2)*log(2*pi)
+  return(list(mean = fStar, cov = V_fStar, logLikelihood = logp))
+}
+```
+
+```{r}
+# (2)
+X <- 0.4
+y <- 0.719
+XStar <- seq(-1,1, length.out = 20) 
+sigmaNoise <- 0.1
+
+result <- posteriorGP(X, y, XStar, sigmaNoise, k = SquaredExpKernel, sigmaF = 1, l = 0.3)
+
+posterior_mean <- result$mean
+posterior_lower <- posterior_mean - 1.96*sqrt(diag(result$cov))
+posterior_upper <- posterior_mean + 1.96*sqrt(diag(result$cov))
+
+plot(X,y, xlim=c(-1,1), ylim = c(-3,3), main = "Plot with 1 observation") 
+lines(XStar, posterior_mean, col="red")
+lines(XStar, posterior_lower, col="blue")
+lines(XStar, posterior_upper, col="blue")
+legend("topleft", legend = c("Posterior Mean", "Posterior 95% CI"), col = c("red", "blue"), lty = 1, lwd = 2)     
+```
+
+```{r}
+# (3)
+X <- c(0.4, -0.6)
+y <- c(0.719, -0.044)
+XStar <- seq(-1,1, length.out = 20) # Not sure about here
+sigmaNoise <- 0.1
+
+result <- posteriorGP(X, y, XStar, sigmaNoise, k = SquaredExpKernel, sigmaF = 1, l = 0.3)
+
+posterior_mean <- result$mean
+posterior_lower <- posterior_mean - 1.96*sqrt(diag(result$cov))
+posterior_upper <- posterior_mean + 1.96*sqrt(diag(result$cov))
+
+
+plot(X,y, xlim=c(-1,1), ylim = c(-3,3), main = "Plot with 2 observations") 
+lines(XStar, posterior_mean, col="red")
+lines(XStar, posterior_lower, col="blue")
+lines(XStar, posterior_upper, col="blue")
+legend("topleft", legend = c("Posterior Mean", "95% CI"), col = c("red", "blue"), lty = 1, lwd = 2)     
+```
+
+```{r}
+# (4)
+X <- c(-1, -0.6, -0.2, 0.4, 0.8)
+y <- c(0.768, -0.044, -0.940, 0.719, -0.664)
+XStar <- seq(-1,1, length.out = 10)
+sigmaNoise <- 0.1
+
+result <- posteriorGP(X, y, XStar, sigmaNoise, k = SquaredExpKernel, sigmaF = 1, l = 0.3)
+
+posterior_mean <- result$mean
+posterior_lower <- posterior_mean - 1.96*sqrt(diag(result$cov))
+posterior_upper <- posterior_mean + 1.96*sqrt(diag(result$cov))
+
+plot(X,y, xlim=c(-1,1), ylim = c(-3,3), main = "Plot with 5 observations") 
+lines(XStar, posterior_mean, col="red")
+lines(XStar, posterior_lower, col="blue")
+lines(XStar, posterior_upper, col="blue")
+legend("topleft", legend = c("Posterior Mean", "95% CI"), col = c("red", "blue"), lty = 1, lwd = 2)  
+```
+
+```{r}
+# (5)
+X <- c(-1, -0.6, -0.2, 0.4, 0.8)
+y <- c(0.768, -0.044, -0.940, 0.719, -0.664)
+XStar <- seq(-1,1, length.out = 10)
+sigmaNoise <- 0.1
+
+result <- posteriorGP(X, y, XStar, sigmaNoise, k = SquaredExpKernel, sigmaF = 1, l = 1)
+
+posterior_mean <- result$mean
+posterior_lower <- posterior_mean - 1.96*sqrt(diag(result$cov))
+posterior_upper <- posterior_mean + 1.96*sqrt(diag(result$cov))
+
+plot(X,y, xlim=c(-1,1), ylim = c(-3,3), main = "Plot with 5 observations") 
+lines(XStar, posterior_mean, col="red")
+lines(XStar, posterior_lower, col="blue")
+lines(XStar, posterior_upper, col="blue")
+legend("topleft", legend = c("Posterior Mean", "95% CI"), col = c("red", "blue"), lty = 1, lwd = 2) 
+```
+
+# Question 2
+
+## (1)
+```{r}
+df <- read.csv("https://github.com/STIMALiU/AdvMLCourse/raw/master/GaussianProcess/Code/TempTullinge.csv", header=TRUE, sep=";")
+
+df$date <- as.Date(df$date, format = "%d/%m/%y") # Convert to date format
+
+# Adding new variables time and day
+df$time <- seq(1, nrow(df), by = 1)
+df$day <- as.numeric(df$date - as.Date(paste0(format(df$date, "%Y"), "-01-01"))) + 1
+
+df_subsample <- df[seq(1, nrow(df), by = 5), ]
+head(df_subsample)
+```
+
+Let's do it with rbf first
+
+
+```{r}
+# I already have the Square exponential kernel in question 1, so I will use it directly
+sigmaf <- 1
+ell <- 3
+X <- c(1,3,4)
+XStar <- c(2,3,4)
+
+SquaredExpKernel(1,2, sigmaf, ell) # Evaluate it at point x=1 and x'=2.
+kernelMatrix(kernel = SquaredExpKernel, x = X, y = XStar) 
+```
+
+## (2)
+```{r}
+
+polyFit <- lm(temp ~  I(time^2), data = df_subsample)
+sigmaNoise <- sd(polyFit$residuals)
+plot(df_subsample$time, df_subsample$temp, xlab = "time", ylab = "temp")
+```
+```{r}
+X <- df_subsample$time
+y <- df_subsample$temp
+
+sigmaf <- 20
+ell <- 100
+
+# NEEDS TO BE FIXED!!
+GPfit <- gausspr(X, y, kernel = rbfdot, kpar = list(sigma = 1/(2*ell^2)), var = sigmaNoise^2)
+meanPred <- predict(GPfit, X) # Predicting the training data. To plot the fit.
+
+plot(X, y, xlab = "time", ylab = "temp")
+lines(X, meanPred, col="blue", lwd = 2)
+```
+
+
+
+
+
+
+# Question 3
+
+
