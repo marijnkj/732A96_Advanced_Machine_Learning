@@ -5,14 +5,15 @@ date: "2024-10-13"
 output:
   pdf_document: 
     latex_engine: xelatex
-    fig_width: 8
-    fig_height: 6
+    fig_width: 6
+    fig_height: 4
   html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(kernlab)
+library(pracma)
 ```
 
 # Question 1
@@ -308,6 +309,72 @@ head(data)
 ```{r}
 set.seed(111) 
 SelectTraining <- sample(1:dim(data)[1], size = 1000, replace = FALSE)
+
+data_train <- data[SelectTraining,]
+data_test <- data[-SelectTraining,]
+```
+
+## (1)
+```{r, fig.align="center"}
+# The model
+GPfit_31 <- gausspr(fraud ~  varWave + skewWave, data=data_train)
+
+# getting class probabilities, the code below is from KernLabDemo.R
+probPreds <- predict(GPfit_31, data_train[,1:2], type="probabilities")
+x1 <- seq(min(data_train[,1]),max(data_train[,1]),length=100)
+x2 <- seq(min(data_train[,2]),max(data_train[,2]),length=100)
+gridPoints <- meshgrid(x1, x2)
+gridPoints <- cbind(c(gridPoints$X), c(gridPoints$Y))
+
+gridPoints <- data.frame(gridPoints)
+names(gridPoints) <- names(data_train)[1:2]
+probPreds <- predict(GPfit_31, gridPoints, type="probabilities")
+
+contour(x1,x2,matrix(probPreds[,1],100,byrow = TRUE), 20, xlab = "varWave", ylab = "skewWave")
+points(data_train[data_train[,5]== 0, 1], data_train[data_train[,5]==0, 2],col="red")
+points(data_train[data_train[,5]== 1, 1], data_train[data_train[,5]==1, 2],col="blue")
+```
+
+```{r}
+# predict on the training set
+preds_train_31 <- predict(GPfit_31, data_train[,1:2])
+conf_31 <- table(preds_train_31, data_train[,5]) # confusion matrix
+
+cat("Confusion matrix of training data:\n")
+conf_31
+
+acc_31 <- sum(diag(conf_31)) / sum(conf_31)
+cat("Accuracy of training data:", acc_31)
+```
+
+# (2)
+```{r}
+# predict on the test set
+preds_test_32 <- predict(GPfit_31, data_test[,1:2])
+conf_32 <- table(preds_test_32, data_test[,5]) # confusion matrix
+
+cat("Confusion matrix of test data:\n")
+conf_32
+
+acc_32 <- sum(diag(conf_32)) / sum(conf_32)
+cat("Accuracy of test data:", acc_32)
+```
+
+# (3)
+Accuracy is higher on the model with all variables compared to model with only 2 variables. Even though this model is more complex, it classifies better since it has more information.
+```{r}
+# The model with all variables
+GPfit_33 <- gausspr(fraud ~ varWave + skewWave +  kurtWave + entropyWave, data=data_train)
+
+# predict on the test set
+preds_test_33 <- predict(GPfit_33, data_test[,1:4])
+conf_33 <- table(preds_test_33, data_test[,5]) # confusion matrix
+
+cat("Confusion matrix of test data:\n")
+conf_33
+
+acc_33 <- sum(diag(conf_33)) / sum(conf_33)
+cat("Accuracy of test data:", acc_33)
 ```
 
 
