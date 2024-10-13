@@ -1,0 +1,187 @@
+---
+title: "Lab 4 - Advanced Machine Learning"
+author: "Simon Jorstedt"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r}
+# SETUP
+
+```
+
+
+# Problem 2.1 - Algorithm implementation
+
+```{r}
+# Covariance function
+SquaredExpKernel <- function(x1, x2, sigmaF=3, l=.3){
+  n1 <- length(x1)
+  n2 <- length(x2)
+  K <- matrix(NA,n1,n2)
+  for (i in 1:n2){
+    K[,i] <- sigmaF^2*exp(-0.5*( (x1-x2[i])/l)^2 )
+  }
+  return(K)
+}
+```
+
+```{r}
+posteriorGP <- function(X, y, XStar, sigmaNoise, k){
+  # Returns a list of sublists (for each XStar value), each containing f_mean, Variance, loglikelihood.
+  K <- k(X, X)
+  L <- t(chol(K + sigmaNoise**2 * diag(length(X))))
+  
+  alpha <- solve(t(L), solve(L, y))
+  
+  #return(alpha)
+  
+  # Collect outputs for each XStar value
+  f_mean_vec <- c()
+  Var_vec <- c()
+  #loglikelihood? no?
+  
+  for (i in 1:length(XStar)){
+    k_star <- matrix(k(XStar[[i]], X),
+                     nrow=length(X))
+    
+    f_star <- t(k_star) %*% alpha
+    
+    v <- solve(L, k_star)
+    
+    V_of_f_star <- k(XStar[[i]], XStar[[i]]) - t(v) %*% v
+    
+    # Save mean and variance
+    f_mean_vec <- c(f_mean_vec, f_star)
+    Var_vec <- c(Var_vec, V_of_f_star)
+    #output[[i]] <- list(f_star, V_of_f_star, log_p_y_X)
+  }
+  
+  log_p_y_X <- -1/2 * t(y) %*% alpha - sum(log(diag(L))) - length(X)/2*log(2*pi)
+  
+  return(list(means = f_mean_vec, variances = Var_vec, loglik=log_p_y_X))
+}
+```
+
+
+## Subproblem 2.1.2
+
+```{r}
+# Plot figure 1
+x_star_values <- seq(-1, 1, 0.1)
+result_1 <- posteriorGP(X=c(0.4),
+                        y=c(0.719),
+                        XStar=x_star_values,
+                        sigmaNoise=0.1,
+                        k=SquaredExpKernel)
+
+lower_cfi_curve <- qnorm(p=0.025, mean=result_1$means, sd = result_1$variances**(1/2))
+upper_cfi_curve <- qnorm(p=0.975, mean=result_1$means, sd = result_1$variances**(1/2))
+
+plot(x_star_values,
+     result_1$means,
+     type="l",
+     ylim=range(lower_cfi_curve, 
+                upper_cfi_curve), 
+     main="Fig 1: Observation (x,y) = (0.4, 0.719)")
+abline(v=c(0.4))
+points(x_star_values, lower_cfi_curve, type="l", col="darkblue")
+points(x_star_values, upper_cfi_curve, type="l", col="darkblue")
+```
+
+
+```{r}
+# Plot figure 2
+x_star_values <- seq(-1, 1, 0.1)
+result_2 <- posteriorGP(X=c(0.4, -0.6),
+                        y=c(0.719, -0.044),
+                        XStar=x_star_values,
+                        sigmaNoise=0.1,
+                        k=SquaredExpKernel)
+
+lower_cfi_curve_2 <- qnorm(p=0.025, mean=result_2$means, sd = result_2$variances**(1/2))
+upper_cfi_curve_2 <- qnorm(p=0.975, mean=result_2$means, sd = result_2$variances**(1/2))
+
+plot(x_star_values,
+     result_2$means,
+     type="l",
+     ylim=range(lower_cfi_curve_2, 
+                upper_cfi_curve_2), 
+     main="Fig 2: Two observations")
+abline(v=c(0.4, -0.6))
+points(x_star_values, lower_cfi_curve_2, type="l", col="darkblue")
+points(x_star_values, upper_cfi_curve_2, type="l", col="darkblue")
+```
+
+
+```{r}
+
+posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8),
+            y=c(0.768, -0.044, -0.940, 0.719, -0.664),
+            XStar=x_star_values,
+            sigmaNoise=0.1,
+            k=SquaredExpKernel)
+
+#posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8), y=c(0.768, -0.044, -0.940, 0.719, -0.664), XStar=c(1,2,3), sigmaNoise=0.1, k=SquaredExpKernel)
+```
+
+```{r}
+
+# Plot after one observation (0.4, 0.719)
+post_means_1 <- c()
+x_star_values <- seq(-1,1,by=0.1)
+for (xstar in x_star_values){
+  res <- posteriorGP(X=0.4, y=0.719, XStar=xstar, sigmaNoise=0.1, k=SquaredExpKernel)
+  
+  post_means_1 <- c(post_means_1, res[[1]])
+}
+
+
+# Plot after an additional observation (-0.6, -0.044)
+post_means_2 <- c()
+for (xstar in x_star_values){
+  res <- posteriorGP(X=matrix(c(0.4, -0.6),nrow=2), y=c(0.719, -0.044), XStar=xstar, sigmaNoise=0.1, k=SquaredExpKernel)
+  
+  post_means_2 <- c(post_means_2, res[[1]])
+}
+
+
+# PLOT!
+#plot(x_star_values, post_means_1, type="l", ylim=c(min(post_means_1, post_means_2), max(post_means_1, post_means_2)))
+#points(x_star_values, post_means_2, type="l", col="blue")
+```
+
+# Subproblem 2.2.4
+
+```{r}
+post_means_3 <- c()
+x_star_values <- seq(-1,1,by=0.1)
+for (xstar in x_star_values){
+  res <- posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8), y=c(0.768, -0.044, -0.940, 0.719, -0.664), XStar=xstar, sigmaNoise=0.1, k=SquaredExpKernel)
+  
+  post_means_3 <- c(post_means_3, res[[1]])
+}
+
+
+plot(x_star_values, post_means_1, type="l", ylim=c(min(post_means_1, post_means_2, post_means_3), max(post_means_1, post_means_2, post_means_3)))
+points(x_star_values, post_means_2, type="l", col="blue")
+points(x_star_values, post_means_3, type="l", col="green")
+```
+
+
+```{r}
+A <- SquaredExpKernel(1:5, 1:5, sigmaF = 0.1) #matrix(c(1,0,1,0,1,0,1,0,1), nrow=3)
+#A
+L <- chol(A)
+t(L) %*% L == A
+#matrix(c(1,0,0,2), nrow=2) %*% t(matrix(c(1,0,0,2), nrow=2))
+```
+
+
+# Problem 2.2 - GP Regression with Kernlab
+
+## Subproblem 2.2.5 - Periodic kernel
+
+
+# Problem 2.3 - GP Classification iwth Kernlab
+
