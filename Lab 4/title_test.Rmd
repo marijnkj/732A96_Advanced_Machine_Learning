@@ -1,0 +1,12 @@
+---
+title: "Untitled"
+author: "Simon Jorstedt"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+```{r}
+plot(c(1,2,3), c(4,5,7), main="Fig 1: Test plot")
+```
+
