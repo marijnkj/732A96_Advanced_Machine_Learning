@@ -5,163 +5,337 @@ date: "2024-10-09"
 output: html_document
 ---
 
-```{r}
+```{r include=FALSE, libraries}
 library(kernlab)
+library(lubridate)
+library(caret)
+library(kableExtra)
+library(pracma)
 ```
 
 # Question 2.1.1
-```{r}
-posteriorGP <- function(X, y, XStar, sigmaNoise, k) {
+Write your own code for simulating from the posterior distribution of $f$ using the squared exponential kernel. The function (name it `posteriorGP`) should return a vector with the posterior mean and variance of $f$ , both evaluated at a set of x-values ($X^*$). You can assume that the prior mean of $f$ is zero for all $x$. The function should have the following inputs:
+* `X`: Vector of training inputs.
+* `y`: Vector of training targets/outputs.
+* `XStar`: Vector of inputs where the posterior distribution is evaluated, i.e. $X^*$.
+* `sigmaNoise`: Noise standard deviation $\sigma_n$.
+* `k`: Covariance function or kernel. That is, the kernel should be a separate function.
+```{r 2.1.1}
+posteriorGP <- function(X, y, X_star, sigma_noise, k) {
   res <- list()
   
   # Compute covariance and Cholesky decomposition
   K <- k(X, X)
-  L <- t(chol(K + sigmaNoise * diag(dim(K)[1])))
+  L <- t(chol(K + sigma_noise ** 2 * diag(dim(K)[1])))
   
   # Compute predictive mean
-  k_star <- k(X, XStar)
+  k_star <- k(X, X_star)
   alpha <- solve(t(L), solve(L, y))
   res$pred_mean <- t(k_star) %*% alpha
   
   # Compute predictive variance
   v <- solve(L, k_star)
-  res$pred_var <- k(XStar, XStar) - t(v) %*% v
+  res$pred_var <- k(X_star, X_star) - t(v) %*% v
   
   # Compute log marginal likelihood
   n <- length(y)
-  res$log_marg_lik <- -0.5 * t(y) %*% alpha - sum(log(diag(L)) - n/2 * log(2 * pi))
+  res$log_marg_lik <- -0.5 * t(y) %*% alpha - sum(log(diag(L))) - n/2 * log(2 * pi)
 
   return(res)
 }
 ```
 
 # Question 2.1.2
-```{r}
+Now, let the prior hyperparameters be $\sigma_f=1$ and $\ell=0.3$. Update this prior with a single observation: $(x, y) = (0.4, 0.719)$. Assume that $\sigma_n=0.1$. Plot the posterior mean of $f$ over the interval $x\in[−1, 1]$. Plot also 95% probability (point-wise) bands for $f$.
+```{r 2.1.2}
 # Hyperparameters
-sigmaF_hyp <- 1
-l_hyp <- 0.3
+sigma_f_hyp <- 1
+ell_hyp <- 0.3
 
 # Covariance function
-SquaredExpKernel <- function(x1, x2, sigmaF=sigmaF_hyp, l=l_hyp){
+fun_squared_exp_kernel <- function(x1, x2, sigma_f=sigma_f_hyp, ell=ell_hyp){
   n1 <- length(x1)
   n2 <- length(x2)
   K <- matrix(NA,n1,n2)
   for (i in 1:n2){
-    K[,i] <- sigmaF^2*exp(-0.5*( (x1-x2[i])/l)^2 )
+    K[,i] <- sigma_f^2*exp(-0.5*((x1-x2[i])/ell)^2)
   }
   return(K)
 }
 
 # Assumptions and data
-sigmaNoise <- 0.1
+sigma_noise <- 0.1
 X <- 0.4
 y <- 0.719
-
 X_grid <- seq(-1, 1, length.out=100)
-means <- c()
-vars <- c()
-for (XStar in X_grid) {
-  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
-  means <- append(means, res$pred_mean)
-  vars <- append(vars, res$pred_var)
-}
+
+# Run algorithm
+res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 1 data point")
-lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
-lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 1 data point\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
+lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
 
 # Question 2.1.3
-```{r}
+Update your posterior from (2) with another observation: $(x, y) = (−0.6, −0.044)$. Plot the posterior mean of $f$ over the interval $x\in[−1, 1]$. Plot also 95% probability (point-wise) bands for $f$.
+
+Hint: Updating the posterior after one observation with a new observation gives the same result as updating the prior directly with the two observations.
+```{r 2.1.3}
+# Define data
 X <- append(X, -0.6)
 y <- append(y, -0.044)
 
-means <- c()
-vars <- c()
-for (XStar in X_grid) {
-  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
-  means <- append(means, res$pred_mean)
-  vars <- append(vars, res$pred_var)
-}
+# Run algorithm
+res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 2 data points")
-lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
-lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 2 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
+lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
+
 # Question 2.1.4
-```{r}
+Compute the posterior distribution of $f$ using all the five data points in the table below (note that the two previous observations are included in the table). Plot the posterior mean of $f$ over the interval $x\in[−1, 1]$. Plot also 95% probability (point-wise) bands for $f$.
+```{r echo=FALSE}
+kable(t(data.frame(x=c(-1.0, -0.6, -0.2, 0.4, 0.8), y=c(0.768, -0.044, -0.94, 0.719, -0.664)))) %>% kable_styling(latex_options="hold_position")
+```
+
+```{r 2.1.4}
+# Define data
 X <- c(-1, -0.6, -0.2, 0.4, 0.8)
 y <- c(0.768, -0.044, -0.94, 0.719, -0.664)
 
-means <- c()
-vars <- c()
-for (XStar in X_grid) {
-  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
-  means <- append(means, res$pred_mean)
-  vars <- append(vars, res$pred_var)
-}
+# Run algorithm
+res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 2 data points")
-lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
-lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 5 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
+lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
 
 # Question 2.1.5
-```{r}
-sigmaF_hyp <- l_hyp <- 1
+Repeat (4), this time with hyperparameters $\sigma_f=1$ and $\ell=1$. Compare the results.
+```{r 2.1.5}
+# Change hyperparameters
+sigma_f_hyp <- ell_hyp <- 1
 
-X <- c(-1, -0.6, -0.2, 0.4, 0.8)
-y <- c(0.768, -0.044, -0.94, 0.719, -0.664)
-
-means <- c()
-vars <- c()
-for (XStar in X_grid) {
-  res <- posteriorGP(X, y, XStar, sigmaNoise, SquaredExpKernel)  
-  means <- append(means, res$pred_mean)
-  vars <- append(vars, res$pred_var)
-}
+# Run algorithm
+res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, means, type="l", ylim=c(-2, 2), main="Posterior with 2 data points")
-lines(X_grid, means + 1.96 * sqrt(vars), col="blue")
-lines(X_grid, means - 1.96 * sqrt(vars), col="blue")
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 5 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
+lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
 
-# 2.2.1
-```{r}
+When increasing $\ell$ to $1$, the variance around the mean becomes much smaller. This may not be ideal as it seems as though we're very certain about our predictions when in fact we only had five data points. It may make more sense to have more certainty on the prediction around those data points as when $\ell=0.3$, and less at other points in the interval.
+
+# Question 2.2.1
+Define your own square exponential kernel function (with parameters $\ell$ (`ell`) and $\sigma_f$ (`sigmaf`)), evaluate it in the point $x = 1, x′ = 2$, and use the `kernelMatrix` function to compute the covariance matrix $K(X, X^∗)$ for the input vectors $X = (1, 3, 4)^T$ and $X^∗ = (2, 3, 4)^T$.
+```{r 2.2.1}
 # Read data
 df <- read.csv("https://github.com/STIMALiU/AdvMLCourse/raw/master/GaussianProcess/Code/TempTullinge.csv", header=TRUE, sep=";")
+date_format <- "%d/%m/%y"
 
 # Convert string date column to date type
 df["date"] <- lapply(df["date"], strptime, format=date_format, tz="UTC") # UTC to ignore Daylight Savings Time differences
 df["time"] <- lapply(df["date"], difftime, time2=df[1, "date"], units="days")
+df["day"] <- lapply(df["date"], function(date) {difftime(date, as.Date(sprintf("1/1/%s", year(date)), "%d/%m/%Y"), units="days")})
 df$time <- as.numeric(df$time)
-# Define kernel
-square_exponential_kernel <- function(x1, x2, ell=ell_hyp, sigmaf=sigmaf_hyp) {
-  return (sigmaf ** 2 * exp(-sqrt(sum((x1 - x2) ** 2)) ** 2 / (2 * ell ** 2)))
-}
-class(square_exponential_kernel) <- "kernel"
+df$day <- as.numeric(df$day)
 
-# Define data and set random hyper parameters and run kernel
+# Define kernel
+ker_squared_exp_kernel <- function(x1, x2, ell=ell_hyp, sigma_f=sigma_f_hyp) {
+  return (sigma_f ** 2 * exp(-sqrt(sum((x1 - x2) ** 2)) ** 2 / (2 * ell ** 2)))
+}
+class(ker_squared_exp_kernel) <- "kernel"
+
+# Define data and set random hyper parameters
 X <- c(1, 3, 4)
 X_star <- c(2, 3, 4)
 ell_hyp <- 0.3
-sigmaf_hyp <- 1
+sigma_f_hyp <- 1
 
-kernelMatrix(square_exponential_kernel, X, X_star)
+# Print some results
+cat("k(1, 2) =", ker_squared_exp_kernel(1, 2), "\n\n")
+cat("K((1, 3, 4)^T, (2, 3, 4)^T =\n")
+kernelMatrix(ker_squared_exp_kernel, X, X_star)
 ```
 
-# 2.2.2
-```{r}
+# Question 2.2.2
+Consider first the following model:
+$$temp=f(time) + \epsilon \text{ with } \epsilon\sim\mathcal{N}(0, \sigma_n^2) \text{ and } f\sim\mathcal{GP}(0, k(time, time'))$$
+Let $\sigma_n^2$ be the residual variance from a simple quadratic regression fit (using the lm function in R). Estimate the above Gaussian process regression model using the `gausspr` function with the squared exponential function from (1) with $\sigma_f=20$ and $\ell=100$ (use the option `scaled=FALSE` in the `gausspr` function, otherwise these $\sigma_f$ and $\ell$ values are not suitable). Use the `predict` function in R to compute the posterior mean at every data point in the training dataset. Make a scatterplot of the data and superimpose the posterior mean of $f$ as a curve (use `type="l"` in the plot function). Plot also the 95% probability (point-wise) bands for $f$. Play around with different values on $\sigma_f$ and $\ell$ (no need to write this in the report though).
+```{r 2.2.2}
+# Set parameters
 lin_mod <- lm("temp ~ time", df)
-sigma_n_2 <- var(lin_mod$residuals)
+sigma_noise <- sd(lin_mod$residuals)
 
 ell_hyp <- 100
-sigmaf_hyp <- 20
+sigma_f_hyp <- 20
 
-mod <- gausspr(df["time"], df["temp"], kernel=square_exponential_kernel, kpar=list(ell_hyp, sigmaf_hyp), scaled=FALSE)
+# Run model and predict
+mod <- gausspr(df["time"], df["temp"], kernel=ker_squared_exp_kernel, kpar=list(ell_hyp, sigma_f_hyp), scaled=FALSE)
+pred <- predict(mod, df["time"])
 
+print(mod)
+
+# Plot results
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(pred, col="red", lw=2)
+lines(pred + 1.96 * sd(pred), col="blue")
+lines(pred - 1.96 * sd(pred), col="blue")
+legend("bottomright", legend=c("True", "Pred", "95% CI"), fill=c("black", "red", "blue"))
 ```
+
+# Question 2.2.3
+Repeat the previous exercise, but now use Algorithm 2.1 on page 19 of Rasmussen and Willams’ book to compute the posterior mean and variance of $f$.
+```{r 2.2.3}
+# Run algorithm
+res <- posteriorGP(df$time, df$temp, df$time, sigma_noise, fun_squared_exp_kernel)
+
+# plot results
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("Posterior on all data\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(res$pred_mean, col="red")
+lines(res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
+lines(res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
+legend("bottomright", legend=c("True", "Pred", "95% CI"), fill=c("black", "red", "blue"))
+```
+
+# Question 2.2.4
+Consider now the following model:
+$$temp=f(day) + \epsilon \text{ with } \epsilon\sim\mathcal{N}(0, \sigma_n^2) \text{ and } f\sim\mathcal{GP}(0, k(day, day'))$$
+Estimate the model using the `gausspr` function with the squared exponential function from (1) with $\sigma_f=20$ and $\ell=100$ (use the option `scaled=FALSE` in the `gausspr` function, otherwise these $\sigma_f$ and $\ell$ values are not suitable). Superimpose the posterior mean from this model on the posterior mean from the model in (2). Note that this plot should also have the time variable on the horizontal axis. Compare the results of both models. What are the pros and cons of each model?
+```{r 2.2.4}
+# Set parameters
+lin_mod <- lm("temp ~ day", df)
+sigma_noise <- sd(lin_mod$residuals)
+
+ell_hyp <- 100
+sigma_f_hyp <- 20
+
+# Run model and predict
+mod <- gausspr(df["day"], df["temp"], kernel=ker_squared_exp_kernel, kpar=list(ell_hyp, sigma_f_hyp), scaled=FALSE)
+pred <- predict(mod, df["day"])
+
+print(mod)
+
+# Plot results
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data using day\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+lines(pred, col="red", lw=2)
+lines(pred + 1.96 * sd(pred), col="blue")
+lines(pred - 1.96 * sd(pred), col="blue")
+legend("bottomright", legend=c("True", "Pred", "95% CI"), fill=c("black", "red", "blue"))
+```
+
+Judging from the visual, the models both perform well. The day model implies we are certain about the period of the data and that the period is consistent. The time model has smaller variance when using the same values for the hyperparameters, which may not necessarily be correct considering the true data, but by tweaking the hyperparameters separately for both models similar results can likely be achieved.
+
+# Question 2.2.5
+Finally, implement the following extension of the squared exponential kernel with a periodic kernel (a.k.a. locally periodic kernel):
+$$k(x, x') = \sigma_f^2exp\left\{-\frac{2sin^2(\pi|x-x'|/d)}{\ell_1^2}\right\}exp\left\{-\frac{1}{2}\frac{|x-x'|^2}{\ell_2^2}\right\}$$
+Note that we have two different length scales in the kernel. Intuitively, $\ell_1$ controls the correlation between two days in the same year, and $\ell_2$ controls the correlation between the same day in different years. Estimate the GP model using the time variable with this kernel and hyperparameters $\sigma_f=20$, $\ell_1=1$, $\ell_2=100$ and $d=365$. Use the `gausspr` function with the option `scaled=FALSE`, otherwise these $\sigma_f$, $\ell_1$ and $\ell_2$ values are not suitable. Compare the fit to the previous two models (with $\sigma_f=20$ and $\ell$ = 100). Discuss the results.
+```{r 2.2.5}
+# Extended squared exponential kernel
+ker_ext_squared_exp_kernel <- function(x1, x2, ell1=ell1_hyp, ell2=ell2_hyp, sigma_f=sigma_f_hyp, d=d_hyp) {
+  euc_dist <- sqrt(sum((x1 - x2) ** 2))
+  exp1 <- exp(-(2 * sin(pi * euc_dist / d) ** 2) / (ell1 ** 2))
+  exp2 <- exp(-0.5 * (euc_dist ** 2) / (ell2 ** 2))
+  k <- sigma_f ** 2 * exp1 * exp2
+  
+  return (k)
+}
+class(ker_ext_squared_exp_kernel) <- "kernel"
+
+# Set parameters
+ell1_hyp <- 1
+ell2_hyp <- 100
+sigma_f_hyp <- 20
+d_hyp <- 365
+
+# Run model and predict
+mod <- gausspr(df["time"], df["temp"], kernel=ker_ext_squared_exp_kernel, kpar=list(ell1_hyp, ell2_hyp, sigma_f_hyp, d_hyp), scaled=FALSE)
+pred <- predict(mod, df["time"])
+
+print(mod)
+
+# Plot results
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data\nsigma_f=%s, ell1=%s, ell2=%s, d=%s, sigma_noise=%s", sigma_f_hyp, ell1_hyp, ell2_hyp, d_hyp, sigma_noise))
+lines(pred, col="red", lw=2)
+lines(pred + 1.96 * sd(pred), col="blue")
+lines(pred - 1.96 * sd(pred), col="blue")
+legend("bottomright", legend=c("True", "Pred", "95% CI"), fill=c("black", "red", "blue"))
+```
+
+When using the extension to the predictions become much more noisy. We're assuming to know someone about the period of the data which leads to more accurate, but also less smooth predictions. It can also be seen that the variance is more accurate around times when there is greater variance in the data.
+
+# Question 2.3.1
+Use the R package `kernlab` to fit a Gaussian process classification model for fraud on the training data. Use the default kernel and hyperparameters. Start using only the covariates `varWave` and `skewWave` in the model. Plot contours of the prediction probabilities over a suitable grid of values for `varWave` and `skewWave`. Overlay the training data for fraud = 1 (as blue points) and fraud = 0 (as red points). Compute the confusion matrix for the classifier and its accuracy.
+```{r 2.3.1}
+# Read data
+data <- read.csv("https://github.com/STIMALiU/AdvMLCourse/raw/master/GaussianProcess/Code/banknoteFraud.csv", header=FALSE, sep=",")
+names(data) <- c("varWave","skewWave","kurtWave","entropyWave","fraud")
+data[,5] <- as.factor(data[,5])
+
+# Sample training data
+set.seed(111)
+select_training <- sample(1:dim(data)[1], size=1000, replace=FALSE)
+df_train <- data[select_training,]
+df_test <- data[-select_training,]
+
+# Run model and predict
+mod <- gausspr(df_train[,c("varWave", "skewWave")], df_train$fraud)
+
+print(mod)
+
+var_wave_grid <- seq(-7, 7, length.out=100)
+skew_wave_grid <- seq(-15, 15, length.out=100)
+grid <- meshgrid(var_wave_grid, skew_wave_grid)
+grid <- cbind(c(grid$X), c(grid$Y))
+pred <- predict(mod, grid, type="probabilities")
+
+# Plot results
+palette(c("red", "blue"))
+
+contour(var_wave_grid, skew_wave_grid, matrix(pred[, 2], 100, byrow = TRUE), 20, xlab="varWave", ylab="skewWave", main="Prob. of fraud")
+points(df_train$varWave, df_train$skewWave, col=df_train$fraud)
+legend("bottomright", legend=c("Not fraud", "Fraud"), fill=1:2)
+
+# Compute training accuracy and confusion matrix
+pred_train <- predict(mod, df_train[, c("varWave", "skewWave")])
+conf_mat <- confusionMatrix(pred_train, df_train$fraud)
+print(conf_mat$overall["Accuracy"])
+cat("\n\n")
+print(conf_mat$table)
+```
+
+# Question 2.3.2
+Using the estimated model from (1), make predictions for the test set. Compute the accuracy.
+```{r 2.3.2}
+# Compute test accuracy and confusion matrix
+pred_test <- predict(mod, df_test[, c("varWave", "skewWave")])
+conf_mat <- confusionMatrix(pred_test, df_test$fraud)
+print(conf_mat$overall["Accuracy"])
+cat("\n\n")
+print(conf_mat$table)
+```
+
+# Question 2.3.3
+Train a model using all four covariates. Make predictions on the test set and compare the accuracy to the model with only two covariates.
+```{r 2.3.3}
+# Train model with four covariates
+mod <- gausspr(df_train[,c("varWave", "skewWave", "kurtWave", "entropyWave")], df_train$fraud)
+
+print(mod)
+
+# Compute train accuracy and confusion matrix
+pred_train <- predict(mod, df_train[, c("varWave", "skewWave", "kurtWave", "entropyWave")])
+conf_mat <- confusionMatrix(pred_train, df_train$fraud)
+print(conf_mat$overall["Accuracy"])
+cat("\n\n")
+print(conf_mat$table)
+```
+
+The model performs much better with all four covariates, reaching almost 100% accuracy.
