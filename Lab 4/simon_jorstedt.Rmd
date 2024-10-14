@@ -5,12 +5,6 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-```{r}
-# SETUP
-
-```
-
-
 # Problem 2.1 - Algorithm implementation
 
 ```{r}
@@ -83,8 +77,10 @@ plot(x_star_values,
      type="l",
      ylim=range(lower_cfi_curve, 
                 upper_cfi_curve), 
-     main="Fig 1: Observation (x,y) = (0.4, 0.719)")
-abline(v=c(0.4))
+     main="Fig 1: Observation (x,y) = (0.4, 0.719)",
+     xlab="XStar",
+     ylab="Mean")
+points(c(0.4), c(0.719))
 points(x_star_values, lower_cfi_curve, type="l", col="darkblue")
 points(x_star_values, upper_cfi_curve, type="l", col="darkblue")
 ```
@@ -107,8 +103,9 @@ plot(x_star_values,
      type="l",
      ylim=range(lower_cfi_curve_2, 
                 upper_cfi_curve_2), 
-     main="Fig 2: Two observations")
-abline(v=c(0.4, -0.6))
+     main="Fig 2: Two observations",
+     xlab="XStar",
+     ylab="Mean")
 points(x_star_values, lower_cfi_curve_2, type="l", col="darkblue")
 points(x_star_values, upper_cfi_curve_2, type="l", col="darkblue")
 points(c(0.4, -0.6), c(0.719, -0.044))
@@ -132,8 +129,9 @@ plot(x_star_values,
      type="l",
      ylim=range(lower_cfi_curve_3, 
                 upper_cfi_curve_3), 
-     main="Fig 3: Five observations")
-abline(v=c(-1, -0.6, -0.2, 0.4, 0.8), col="grey")
+     main="Fig 3: Five observations",
+     xlab="XStar",
+     ylab="Mean")
 points(x_star_values, lower_cfi_curve_3, type="l", col="darkblue")
 points(x_star_values, upper_cfi_curve_3, type="l", col="darkblue")
 points(c(-1, -0.6, -0.2, 0.4, 0.8), c(0.768, -0.044, -0.940, 0.719, -0.664))
@@ -163,14 +161,16 @@ plot(x_star_values,
      type="l",
      ylim=range(lower_cfi_curve_4, 
                 upper_cfi_curve_4), 
-     main="Fig 4: Five observations (sigma_f=1, l=1)")
-abline(v=c(-1, -0.6, -0.2, 0.4, 0.8), col="grey")
+     main="Fig 4: Five observations (sigma_f=1, l=1)",
+     xlab="XStar",
+     ylab="Mean")
 points(x_star_values, lower_cfi_curve_4, type="l", col="darkblue")
 points(x_star_values, upper_cfi_curve_4, type="l", col="darkblue")
 points(c(-1, -0.6, -0.2, 0.4, 0.8), c(0.768, -0.044, -0.940, 0.719, -0.664))
 ```
 
 # Problem 2.2 - GP Regression with Kernlab
+We will now work with some data documenting the mean temperature in Tullinge, Stockholm for a period of six years.
 
 ```{r}
 # Read data
@@ -184,7 +184,8 @@ data_temp_subset <- data_temp[seq(1, nrow(data_temp), 5),]
 library(kernlab)
 ```
 
-## Subproblem 2.2.1 - 
+## Subproblem 2.2.1
+Below we define our own square exponential kernel and evaluate it in the point $(1,2)$, and then we calculate the covariance matrix $K(X,X_\star)$ for the input vectors given below.
 
 ```{r}
 # Specify hyperparams
@@ -200,6 +201,7 @@ kernelMatrix(SEkernel, x=c(1,3,4), y=c(2,3,4))
 ```
 
 ## Subproblem 2.2.2
+Now we consider a Gaussian process model with time as an explanatory variable for the temperature. Below
 
 ```{r}
 # Estimate sigma_n
@@ -216,7 +218,10 @@ gaupr_res_1 <- gausspr(x=data_temp_subset$time, y=data_temp_subset$temp,
 predicted_1 <- predict(gaupr_res_1, data_temp_subset$time)
 
 # Plot 5
-plot(data_temp_subset$time, data_temp_subset$temp, t="l", main="Fig 5: gausspr approximation")
+plot(data_temp_subset$time, data_temp_subset$temp, t="l",
+     main="Fig 5: gausspr approximation (time)",
+     xlab="time",
+     ylab="temperature")
 points(data_temp_subset$time, predicted_1, t="l", col="red")
 points(data_temp_subset$time,
        predicted_1+predict(gaupr_res_1, data_temp_subset$time, type="sdeviation"),
@@ -249,16 +254,165 @@ plot(data_temp_subset$time,
      result_5$means,
      type="l",
      ylim=range(data_temp_subset$temp), 
-     main="Fig 6: Subproblem 2.2.3", col="red")
+     main="Fig 6: posteriorGP approximation (time)", col="red",
+     xlab="time",
+     ylab="temperature")
 points(data_temp_subset$time, lower_cfi_curve_5, type="l", col="darkblue")
 points(data_temp_subset$time, upper_cfi_curve_5, type="l", col="darkblue")
 points(data_temp_subset$time, data_temp_subset$temp, type="l")
 ```
 
+## Subproblem 2.2.4
 
+```{r}
+# Estimate sigma_n
+polyFit_2 <- lm(temp ~ day + day**2, data=data_temp_subset)
+sigma_n_squared_2 = sd(polyFit_2$residuals)**2
+
+gaupr_res_2 <- gausspr(x=data_temp_subset$day,
+                       y=data_temp_subset$temp,
+                       kernel = SEkernel,
+                       kpar = list(sigma, ell),
+                       var = sigma_n_squared_2,
+                       variance.model = TRUE,
+                       scaled=FALSE)
+
+predicted_2 <- predict(gaupr_res_2, data_temp_subset$day)
+
+# Plot 7
+plot(data_temp_subset$time, data_temp_subset$temp, t="l",
+     main="Fig 7: gausspr approximation (day)",
+     xlab="time",
+     ylab="temperature")
+points(data_temp_subset$time, predicted_2, t="l", col="red")
+points(data_temp_subset$time,
+       predicted_2+predict(gaupr_res_2, data_temp_subset$day, type="sdeviation"),
+       t="l", col="blue")
+points(data_temp_subset$time,
+       predicted_2-predict(gaupr_res_2, data_temp_subset$day, type="sdeviation"),
+       t="l", col="blue")
+```
 
 ## Subproblem 2.2.5 - Periodic kernel
 
+```{r}
+# Hyperparameters
+sigmaf <- 20
+ell_1 <- 1
+ell_2 <- 100
 
-# Problem 2.3 - GP Classification iwth Kernlab
+# Define periodic kernel
+periodic_kernel <- function(x1, x2, sigmaf=20, ell_1=1, ell_2=100){
+  d <- 365
+  exp1 <- exp(-2/ell_1^2 * sin(pi*abs(x1-x2)/d)**2)
+  exp2 <- exp(-0.5*( (x1-x2)/ell_2)^2 )
+  
+  k <- sigmaf**2 * exp1 * exp2
+  
+  return(k)
+}
+class(periodic_kernel) <- "kernel"
+```
+
+```{r}
+# Estimate sigma_n
+polyFit_6 <- lm(temp ~ time + time**2, data=data_temp_subset)
+sigma_n_squared_2 = sd(polyFit_6$residuals)**2
+
+gaupr_res_6 <- gausspr(x=data_temp_subset$time,
+                       y=data_temp_subset$temp,
+                       kernel = periodic_kernel,
+                       kpar = list(sigmaf, ell_1, ell_2),
+                       var = sigma_n_squared_2,
+                       variance.model = TRUE,
+                       scaled=FALSE)
+
+predicted_6 <- predict(gaupr_res_6, data_temp_subset$time)
+
+# Plot 8
+plot(data_temp_subset$time, data_temp_subset$temp, t="l",
+     main="Fig 8: gausspr approximation (time) (periodic kernel)",
+     xlab="time",
+     ylab="temperature")
+points(data_temp_subset$time, predicted_6, t="l", col="red")
+points(data_temp_subset$time,
+       predicted_6+predict(gaupr_res_6, data_temp_subset$time, type="sdeviation"),
+       t="l", col="blue")
+points(data_temp_subset$time,
+       predicted_6-predict(gaupr_res_6, data_temp_subset$time, type="sdeviation"),
+       t="l", col="blue")
+```
+
+# Problem 2.3 - GP Classification with kernlab
+## Subproblem 2.3.1
+```{r}
+# Read data
+data <- read.csv("https://github.com/STIMALiU/AdvMLCourse/raw/master/GaussianProcess/Code/banknoteFraud.csv", header=FALSE, sep=",")
+names(data) <- c("varWave","skewWave","kurtWave","entropyWave","fraud")
+data[,5] <- as.factor(data[,5])
+ 
+set.seed(111); SelectTraining <- sample(1:dim(data)[1], size = 1000, replace = FALSE)
+
+data_train <- data[SelectTraining,]
+```
+
+```{r, out.width="70%"}
+# Fit Gaussian process
+gaupr_res_7 <- gausspr(x=data_train[,c(1,2)],
+                       y=data_train$fraud)
+
+varWave_grid <- seq(min(data_train$varWave),
+                    max(data_train$varWave),
+                    length.out=100)
+skewWave_grid <- seq(min(data_train$skewWave),
+                    max(data_train$skewWave),
+                    length.out=100)
+
+# For meshgrid
+library(pracma)
+meshgrid_var_skew <- meshgrid(varWave_grid, skewWave_grid)
+contour_df <- cbind(c(meshgrid_var_skew$X), c(meshgrid_var_skew$Y))
+
+predicted_probs <- predict(gaupr_res_7, contour_df, type="probabilities")
+
+# Plot 9
+contour(x=varWave_grid, y=skewWave_grid,
+        z=matrix(predicted_probs[,2], nrow=100, ncol=100),
+        xlab="varWave",
+        ylab="skewWave",
+        main="Fig 9: Contour plot of positive(1) probability,\npositive (red) and negative (blue) samples included.")
+points(data_train[data_train$fraud == 0,c(1,2)], col="blue")
+points(data_train[data_train$fraud == 1,c(1,2)], col="red")
+```
+
+## Subproblem 2.3.2
+
+```{r}
+# Predict on train data
+fraud_predictions <- predict(gaupr_res_7, data_train[,c(1,2)])
+
+# Confusion matrix and accuracy
+library(caret)
+print("Confusion matrix for train data")
+confusionMatrix(fraud_predictions, data_train$fraud)
+
+# Test data confusion matrix and accuracy
+fraud_predictions_testdata <- predict(gaupr_res_7, data[-SelectTraining,][,c(1,2)])
+print("Confusion matrix for test data")
+confusionMatrix(fraud_predictions_testdata, data[-SelectTraining,]$fraud)
+```
+
+## Subproblem 2.3.3
+Below we see the result of training the model on all four covariates, and it appears evident that the model certainly achieves a higher accuracy (~99%) on the test data, than when only the first two covariates were used previously (~92%). In particular, the respective accuracy confidence intervals do not overlap, supporting this.
+
+```{r}
+# Fit Gaussian process
+gaupr_res_8 <- gausspr(x=data_train[,c(1,2,3,4)],
+                       y=data_train$fraud)
+
+# Test data confusion matrix and accuracy
+fraud_predictions_testdata_2 <- predict(gaupr_res_8, data[-SelectTraining,][,c(1,2,3,4)])
+print("Confusion matrix for test data")
+confusionMatrix(fraud_predictions_testdata_2, data[-SelectTraining,]$fraud)
+```
 
