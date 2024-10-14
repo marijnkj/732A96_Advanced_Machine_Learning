@@ -64,11 +64,11 @@ posteriorGP <- function(X, y, XStar, sigmaNoise, k){
 ```
 
 
-## Subproblem 2.1.2
+## Subproblem 2.1.2 - Single datapoint
 
 ```{r}
 # Plot figure 1
-x_star_values <- seq(-1, 1, 0.1)
+x_star_values <- seq(-1, 1, 0.01)
 result_1 <- posteriorGP(X=c(0.4),
                         y=c(0.719),
                         XStar=x_star_values,
@@ -89,10 +89,10 @@ points(x_star_values, lower_cfi_curve, type="l", col="darkblue")
 points(x_star_values, upper_cfi_curve, type="l", col="darkblue")
 ```
 
+## Subproblem 2.1.3 - Additional datapoint
 
 ```{r}
 # Plot figure 2
-x_star_values <- seq(-1, 1, 0.1)
 result_2 <- posteriorGP(X=c(0.4, -0.6),
                         y=c(0.719, -0.044),
                         XStar=x_star_values,
@@ -111,74 +111,151 @@ plot(x_star_values,
 abline(v=c(0.4, -0.6))
 points(x_star_values, lower_cfi_curve_2, type="l", col="darkblue")
 points(x_star_values, upper_cfi_curve_2, type="l", col="darkblue")
+points(c(0.4, -0.6), c(0.719, -0.044))
 ```
 
+## Subproblem 2.1.4 - Five datapoints
 
 ```{r}
+# Plot figure 3
+result_3 <- posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8),
+                        y=c(0.768, -0.044, -0.940, 0.719, -0.664),
+                        XStar=x_star_values,
+                        sigmaNoise=0.1,
+                        k=SquaredExpKernel)
 
-posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8),
-            y=c(0.768, -0.044, -0.940, 0.719, -0.664),
-            XStar=x_star_values,
-            sigmaNoise=0.1,
-            k=SquaredExpKernel)
+lower_cfi_curve_3 <- qnorm(p=0.025, mean=result_3$means, sd = result_3$variances**(1/2))
+upper_cfi_curve_3 <- qnorm(p=0.975, mean=result_3$means, sd = result_3$variances**(1/2))
 
-#posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8), y=c(0.768, -0.044, -0.940, 0.719, -0.664), XStar=c(1,2,3), sigmaNoise=0.1, k=SquaredExpKernel)
+plot(x_star_values,
+     result_3$means,
+     type="l",
+     ylim=range(lower_cfi_curve_3, 
+                upper_cfi_curve_3), 
+     main="Fig 3: Five observations")
+abline(v=c(-1, -0.6, -0.2, 0.4, 0.8), col="grey")
+points(x_star_values, lower_cfi_curve_3, type="l", col="darkblue")
+points(x_star_values, upper_cfi_curve_3, type="l", col="darkblue")
+points(c(-1, -0.6, -0.2, 0.4, 0.8), c(0.768, -0.044, -0.940, 0.719, -0.664))
 ```
+
+## Subproblem 2.1.5 - Five datapoints (sigmaF=1, l=1)
 
 ```{r}
+# Plot figure 4
 
-# Plot after one observation (0.4, 0.719)
-post_means_1 <- c()
-x_star_values <- seq(-1,1,by=0.1)
-for (xstar in x_star_values){
-  res <- posteriorGP(X=0.4, y=0.719, XStar=xstar, sigmaNoise=0.1, k=SquaredExpKernel)
-  
-  post_means_1 <- c(post_means_1, res[[1]])
-}
+# Create SquaredExpKernel with different hyperparameters
+alt_SquaredExpKernel <- SquaredExpKernel
+formals(alt_SquaredExpKernel)$sigmaF = 1
+formals(alt_SquaredExpKernel)$l = 1
 
+result_4 <- posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8),
+                        y=c(0.768, -0.044, -0.940, 0.719, -0.664),
+                        XStar=x_star_values,
+                        sigmaNoise=0.1,
+                        k=alt_SquaredExpKernel)
 
-# Plot after an additional observation (-0.6, -0.044)
-post_means_2 <- c()
-for (xstar in x_star_values){
-  res <- posteriorGP(X=matrix(c(0.4, -0.6),nrow=2), y=c(0.719, -0.044), XStar=xstar, sigmaNoise=0.1, k=SquaredExpKernel)
-  
-  post_means_2 <- c(post_means_2, res[[1]])
-}
+lower_cfi_curve_4 <- qnorm(p=0.025, mean=result_4$means, sd = result_4$variances**(1/2))
+upper_cfi_curve_4 <- qnorm(p=0.975, mean=result_4$means, sd = result_4$variances**(1/2))
 
-
-# PLOT!
-#plot(x_star_values, post_means_1, type="l", ylim=c(min(post_means_1, post_means_2), max(post_means_1, post_means_2)))
-#points(x_star_values, post_means_2, type="l", col="blue")
+plot(x_star_values,
+     result_4$means,
+     type="l",
+     ylim=range(lower_cfi_curve_4, 
+                upper_cfi_curve_4), 
+     main="Fig 4: Five observations (sigma_f=1, l=1)")
+abline(v=c(-1, -0.6, -0.2, 0.4, 0.8), col="grey")
+points(x_star_values, lower_cfi_curve_4, type="l", col="darkblue")
+points(x_star_values, upper_cfi_curve_4, type="l", col="darkblue")
+points(c(-1, -0.6, -0.2, 0.4, 0.8), c(0.768, -0.044, -0.940, 0.719, -0.664))
 ```
-
-# Subproblem 2.2.4
-
-```{r}
-post_means_3 <- c()
-x_star_values <- seq(-1,1,by=0.1)
-for (xstar in x_star_values){
-  res <- posteriorGP(X=c(-1, -0.6, -0.2, 0.4, 0.8), y=c(0.768, -0.044, -0.940, 0.719, -0.664), XStar=xstar, sigmaNoise=0.1, k=SquaredExpKernel)
-  
-  post_means_3 <- c(post_means_3, res[[1]])
-}
-
-
-plot(x_star_values, post_means_1, type="l", ylim=c(min(post_means_1, post_means_2, post_means_3), max(post_means_1, post_means_2, post_means_3)))
-points(x_star_values, post_means_2, type="l", col="blue")
-points(x_star_values, post_means_3, type="l", col="green")
-```
-
-
-```{r}
-A <- SquaredExpKernel(1:5, 1:5, sigmaF = 0.1) #matrix(c(1,0,1,0,1,0,1,0,1), nrow=3)
-#A
-L <- chol(A)
-t(L) %*% L == A
-#matrix(c(1,0,0,2), nrow=2) %*% t(matrix(c(1,0,0,2), nrow=2))
-```
-
 
 # Problem 2.2 - GP Regression with Kernlab
+
+```{r}
+# Read data
+data_temp <- read.csv("https://github.com/STIMALiU/AdvMLCourse/raw/master/GaussianProcess/Code/TempTullinge.csv", header=TRUE, sep=";")
+
+data_temp$time <- as.numeric(1:2190)
+data_temp$day <- as.numeric(rep(1:365, 6))
+
+data_temp_subset <- data_temp[seq(1, nrow(data_temp), 5),]
+
+library(kernlab)
+```
+
+## Subproblem 2.2.1 - 
+
+```{r}
+# Specify hyperparams
+sigmaf <- 20
+ell <- 100
+SEkernel <- rbfdot(sigma = 1/(2*ell^2))
+
+# Evaluated at (1,2)
+SEkernel(1,2)
+
+#
+kernelMatrix(SEkernel, x=c(1,3,4), y=c(2,3,4))
+```
+
+## Subproblem 2.2.2
+
+```{r}
+# Estimate sigma_n
+polyFit <- lm(temp ~ time + time**2, data=data_temp_subset)
+sigma_n_squared = sd(polyFit$residuals)**2
+
+gaupr_res_1 <- gausspr(x=data_temp_subset$time, y=data_temp_subset$temp,
+                       kernel = SEkernel,
+                       kpar = list(sigma, ell),
+                       var = sigma_n_squared,
+                       variance.model = TRUE,
+                       scaled=FALSE)
+
+predicted_1 <- predict(gaupr_res_1, data_temp_subset$time)
+
+# Plot 5
+plot(data_temp_subset$time, data_temp_subset$temp, t="l", main="Fig 5: gausspr approximation")
+points(data_temp_subset$time, predicted_1, t="l", col="red")
+points(data_temp_subset$time,
+       predicted_1+predict(gaupr_res_1, data_temp_subset$time, type="sdeviation"),
+       t="l", col="blue")
+points(data_temp_subset$time,
+       predicted_1-predict(gaupr_res_1, data_temp_subset$time, type="sdeviation"),
+       t="l", col="blue")
+```
+
+## Subproblem 2.2.3
+
+```{r}
+# Plot figure 6
+
+# Create SquaredExpKernel with different hyperparameters
+alt_SquaredExpKernel <- SquaredExpKernel
+formals(alt_SquaredExpKernel)$sigmaF = 20
+formals(alt_SquaredExpKernel)$l = 100
+
+result_5 <- posteriorGP(X=data_temp_subset$time,
+                        y=data_temp_subset$temp,
+                        XStar=data_temp_subset$time,
+                        sigmaNoise=sigma_n_squared**(.5),
+                        k=alt_SquaredExpKernel)
+
+lower_cfi_curve_5 <- qnorm(p=0.025, mean=result_5$means, sd = result_5$variances**(1/2))
+upper_cfi_curve_5 <- qnorm(p=0.975, mean=result_5$means, sd = result_5$variances**(1/2))
+
+plot(data_temp_subset$time,
+     result_5$means,
+     type="l",
+     ylim=range(data_temp_subset$temp), 
+     main="Fig 6: Subproblem 2.2.3", col="red")
+points(data_temp_subset$time, lower_cfi_curve_5, type="l", col="darkblue")
+points(data_temp_subset$time, upper_cfi_curve_5, type="l", col="darkblue")
+points(data_temp_subset$time, data_temp_subset$temp, type="l")
+```
+
+
 
 ## Subproblem 2.2.5 - Periodic kernel
 
