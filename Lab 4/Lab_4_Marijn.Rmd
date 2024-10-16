@@ -73,7 +73,7 @@ X_grid <- seq(-1, 1, length.out=100)
 res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 1 data point\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 1 data point\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
 lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
@@ -91,7 +91,7 @@ y <- append(y, -0.044)
 res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 2 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 2 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
 lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
@@ -111,7 +111,7 @@ y <- c(0.768, -0.044, -0.94, 0.719, -0.664)
 res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 5 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 5 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
 lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
@@ -126,7 +126,7 @@ sigma_f_hyp <- ell_hyp <- 1
 res <- posteriorGP(X, y, X_grid, sigma_noise, fun_squared_exp_kernel)  
 
 # Plot means with 95% CI
-plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 5 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(X_grid, res$pred_mean, type="l", ylim=c(-2, 2), main=sprintf("Posterior with 5 data points\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(X_grid, res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
 lines(X_grid, res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
 ```
@@ -171,20 +171,20 @@ $$temp=f(time) + \epsilon \text{ with } \epsilon\sim\mathcal{N}(0, \sigma_n^2) \
 Let $\sigma_n^2$ be the residual variance from a simple quadratic regression fit (using the lm function in R). Estimate the above Gaussian process regression model using the `gausspr` function with the squared exponential function from (1) with $\sigma_f=20$ and $\ell=100$ (use the option `scaled=FALSE` in the `gausspr` function, otherwise these $\sigma_f$ and $\ell$ values are not suitable). Use the `predict` function in R to compute the posterior mean at every data point in the training dataset. Make a scatterplot of the data and superimpose the posterior mean of $f$ as a curve (use `type="l"` in the plot function). Plot also the 95% probability (point-wise) bands for $f$. Play around with different values on $\sigma_f$ and $\ell$ (no need to write this in the report though).
 ```{r 2.2.2}
 # Set parameters
-lin_mod <- lm("temp ~ time", df)
+lin_mod <- lm("temp ~ time + time**2", df)
 sigma_noise <- sd(lin_mod$residuals)
 
 ell_hyp <- 100
 sigma_f_hyp <- 20
 
 # Run model and predict
-mod <- gausspr(df["time"], df["temp"], kernel=ker_squared_exp_kernel, kpar=list(ell_hyp, sigma_f_hyp), scaled=FALSE)
+mod <- gausspr(df["time"], df["temp"], kernel=ker_squared_exp_kernel, kpar=list(ell_hyp, sigma_f_hyp), var=sigma_noise ** 2, variance.model=TRUE, scaled=FALSE)
 pred <- predict(mod, df["time"])
 
 print(mod)
 
 # Plot results
-plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(pred, col="red", lw=2)
 lines(pred + 1.96 * sd(pred), col="blue")
 lines(pred - 1.96 * sd(pred), col="blue")
@@ -198,7 +198,7 @@ Repeat the previous exercise, but now use Algorithm 2.1 on page 19 of Rasmussen 
 res <- posteriorGP(df$time, df$temp, df$time, sigma_noise, fun_squared_exp_kernel)
 
 # plot results
-plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("Posterior on all data\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("Posterior on all data\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(res$pred_mean, col="red")
 lines(res$pred_mean + 1.96 * sqrt(diag(res$pred_var)), col="blue")
 lines(res$pred_mean - 1.96 * sqrt(diag(res$pred_var)), col="blue")
@@ -218,13 +218,13 @@ ell_hyp <- 100
 sigma_f_hyp <- 20
 
 # Run model and predict
-mod <- gausspr(df["day"], df["temp"], kernel=ker_squared_exp_kernel, kpar=list(ell_hyp, sigma_f_hyp), scaled=FALSE)
+mod <- gausspr(df["day"], df["temp"], kernel=ker_squared_exp_kernel, kpar=list(ell_hyp, sigma_f_hyp), var=sigma_noise ** 2, variance.model=TRUE, scaled=FALSE)
 pred <- predict(mod, df["day"])
 
 print(mod)
 
 # Plot results
-plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data using day\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, sigma_noise))
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data using day\nsigma_f=%s, ell=%s, sigma_noise=%s", sigma_f_hyp, ell_hyp, round(sigma_noise, 3)))
 lines(pred, col="red", lw=2)
 lines(pred + 1.96 * sd(pred), col="blue")
 lines(pred - 1.96 * sd(pred), col="blue")
@@ -256,13 +256,13 @@ sigma_f_hyp <- 20
 d_hyp <- 365
 
 # Run model and predict
-mod <- gausspr(df["time"], df["temp"], kernel=ker_ext_squared_exp_kernel, kpar=list(ell1_hyp, ell2_hyp, sigma_f_hyp, d_hyp), scaled=FALSE)
+mod <- gausspr(df["time"], df["temp"], kernel=ker_ext_squared_exp_kernel, kpar=list(ell1_hyp, ell2_hyp, sigma_f_hyp, d_hyp), var=sigma_noise, variance.model=TRUE, scaled=FALSE)
 pred <- predict(mod, df["time"])
 
 print(mod)
 
 # Plot results
-plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data\nsigma_f=%s, ell1=%s, ell2=%s, d=%s, sigma_noise=%s", sigma_f_hyp, ell1_hyp, ell2_hyp, d_hyp, sigma_noise))
+plot(df$time, df$temp, col=rgb(0, 0, 0, 0.3), ylim=c(-35, 40), main=sprintf("GPR on all data\nsigma_f=%s, ell1=%s, ell2=%s, d=%s, sigma_noise=%s", sigma_f_hyp, ell1_hyp, ell2_hyp, d_hyp, round(sigma_noise, 3)))
 lines(pred, col="red", lw=2)
 lines(pred + 1.96 * sd(pred), col="blue")
 lines(pred - 1.96 * sd(pred), col="blue")
