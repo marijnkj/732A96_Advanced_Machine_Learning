@@ -135,4 +135,4 @@ confusionMatrix(factor(pred), factor(df_test$S))
 ```
 
 # Question 5
-In this case, there was no difference in accuracy between using the full model as evidence and using the Markov blanket. We hypothesize that the Markov blanket would give slightly worse results in a more complex network, because then we may be ignoring dependencies that do have an impact on the investigated variable. The naive classifier performs a little bit worse than the other two, likely because the model is modeling dependencies incorrectly. This may lead to other variables impacting S within this graph, while that is not true in reality. 
+Markov blanket is the minimal set of nodes that separates a given node from the rest. In question 2 and question 3, there was no difference in accuracy between using the full model as evidence and using the Markov blanket, as the Markov blanket retains all necessary information to do inference on S. The naive classifier performs a little bit worse than the other two, likely because the model is modeling dependencies incorrectly. This may lead to other variables impacting S within this graph, while that is not true in reality.
